@@ -3,10 +3,10 @@ the failure label the harness assigns."""
 
 from __future__ import annotations
 
-from indoeval.agent import ScriptedAgent
-from indoeval.models import ExpectedCall, FailureType, Task, ToolCallRecord, Trajectory
-from indoeval.runner import run_agent
-from indoeval.score import score_task, summarize
+from tugas.agent import ScriptedAgent
+from tugas.models import ExpectedCall, FailureType, Task, ToolCallRecord, Trajectory
+from tugas.runner import run_agent
+from tugas.score import score_task, summarize
 
 TASK = Task(
     id="t1",

@@ -1,4 +1,4 @@
-"""indo-eval command line: list tasks, run a model, print the score table."""
+"""TUGAS command line: list tasks, run a model, print the score table."""
 
 from __future__ import annotations
 

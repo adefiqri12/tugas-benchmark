@@ -1,4 +1,4 @@
-"""indo-eval: evaluation harness for Indonesian tool-calling agents."""
+"""TUGAS (Tool-Use and Grounded Agent Score): benchmark for tool-calling agents in Bahasa Indonesia."""
 
 from .models import ExpectedCall, FailureType, Task, TaskResult, ToolCallRecord, Trajectory
 from .runner import load_tasks, run_agent

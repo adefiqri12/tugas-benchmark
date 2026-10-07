@@ -45,9 +45,9 @@ class LLMAgent:
     ) -> None:
         self.name = model
         self.model = model
-        self.base_url = (base_url or os.environ.get("INDOEVAL_BASE_URL")
+        self.base_url = (base_url or os.environ.get("TUGAS_BASE_URL")
                          or "http://127.0.0.1:20129/v1").rstrip("/")
-        self.api_key = api_key or os.environ.get("INDOEVAL_API_KEY", "")
+        self.api_key = api_key or os.environ.get("TUGAS_API_KEY", "")
         self.max_steps = max_steps
         self.timeout = timeout
 
