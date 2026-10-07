@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "name": "indo-eval golden (seed)",
+    "language": "id",
+    "anchor_date": "2026-10-07",
+    "note": "Seed set. expected = the tool call(s) a correct agent must produce. Args listed are the ones checked; omitted optional args are not scored."
+  },
+  "tasks": [
+    {
+      "id": "id-flight-abs",
+      "category": "multi-step/abs-date",
+      "prompt": "Saya mau terbang dari Jakarta ke Makassar tanggal 12 Oktober 2026. Tolong carikan penerbangannya.",
+      "expected": [
+        {"tool": "cari_penerbangan", "args": {"asal": "Jakarta", "tujuan": "Makassar", "tanggal": "2026-10-12"}}
+      ],
+      "notes": "Date already absolute — no parse needed."
+    },
+    {
+      "id": "id-saldo-arith",
+      "category": "arithmetic",
+      "prompt": "Saldo saya Rp1.200.000. Habis Rp150.000 buat makan. Sekarang sisa berapa?",
+      "expected": [
+        {"tool": "hitung", "args": {"ekspresi": "1200000 - 150000"}}
+      ],
+      "notes": "Model must translate rupiah text into an arithmetic expression."
+    },
+    {
+      "id": "id-cuaca-relative",
+      "category": "multi-step/relative-date",
+      "prompt": "Cuaca di Samarinda minggu depan gimana?",
+      "expected": [
+        {"tool": "parse_tanggal", "args": {"teks": "minggu depan"}},
+        {"tool": "cek_cuaca", "args": {"kota": "Samarinda"}}
+      ],
+      "notes": "Requires resolving 'minggu depan' before calling weather. Only city is scored on cek_cuaca."
+    },
+    {
+      "id": "id-tanggal-simple",
+      "category": "date-resolution",
+      "prompt": "Besok tanggal berapa? Jawab format YYYY-MM-DD.",
+      "expected": [
+        {"tool": "parse_tanggal", "args": {"teks": "besok"}}
+      ],
+      "notes": "Single-step relative date."
+    }
+  ]
+}
