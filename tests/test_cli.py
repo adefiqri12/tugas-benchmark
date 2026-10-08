@@ -22,24 +22,28 @@ def test_default_tasks_path_loads_golden_tasks() -> None:
     assert all(t.expected for t in tasks), "every task needs an expected call"
 
 
-def test_golden_dataset_has_seven_tasks() -> None:
+def test_golden_dataset_has_nine_tasks() -> None:
     tasks = load_tasks(default_tasks_path())
-    assert len(tasks) == 7, f"expected 7 golden tasks, got {len(tasks)}"
+    assert len(tasks) == 9, f"expected 9 golden tasks, got {len(tasks)}"
     assert all(t.expected for t in tasks), "every task needs a non-empty expected trace"
 
 
 def test_golden_dataset_includes_new_task_ids() -> None:
     ids = {t.id for t in load_tasks(default_tasks_path())}
-    for expected_id in ("id-tanggal-lusa", "id-tanggal-ddmm", "id-satuan-kodi"):
+    for expected_id in (
+        "id-tanggal-lusa",
+        "id-tanggal-ddmm",
+        "id-satuan-kodi",
+        "id-sapaan-malam",
+        "id-alamat-kota",
+    ):
         assert expected_id in ids, f"{expected_id} missing from golden set"
 
 
-def test_new_golden_tasks_replay_to_ok() -> None:
-    # Offline end-to-end: a ScriptedAgent replaying each new task's expected
-    # calls must score FailureType.OK (exercises the any-of replay path).
-    new_ids = {"id-tanggal-lusa", "id-tanggal-ddmm", "id-satuan-kodi"}
-    tasks = [t for t in load_tasks(default_tasks_path()) if t.id in new_ids]
-    assert len(tasks) == 3
+def test_every_golden_task_replays_to_ok() -> None:
+    # Offline end-to-end: a ScriptedAgent replaying each task's expected calls
+    # must score FailureType.OK (exercises the any-of list-arg replay path).
+    tasks = load_tasks(default_tasks_path())
 
     plan = {}
     for task in tasks:
@@ -48,7 +52,7 @@ def test_new_golden_tasks_replay_to_ok() -> None:
         ]
 
     results = run_agent(ScriptedAgent("scripted", plan), tasks)
-    assert len(results) == 3
+    assert len(results) == len(tasks)
     for result in results:
         assert result.failure == FailureType.OK, f"{result.task_id}: {result.failure}"
 

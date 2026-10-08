@@ -45,7 +45,7 @@ Point it at your gateway with `TUGAS_BASE_URL` / `TUGAS_API_KEY`
 ```
 src/tugas/
   models.py   Task, ExpectedCall, Trajectory, TaskResult, FailureType
-  tools.py    mock Indonesian tools (parse_tanggal, cari_penerbangan, cek_cuaca, hitung)
+  tools.py    mock Indonesian tools (parse_tanggal, cari_penerbangan, cek_cuaca, hitung, sapaan_waktu, parse_alamat)
   agent.py    LLMAgent (gateway) + ScriptedAgent (offline baseline)
   score.py    trajectory scoring + failure taxonomy
   runner.py   load tasks, run agent, score, summarize

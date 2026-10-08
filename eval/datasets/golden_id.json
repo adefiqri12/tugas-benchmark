@@ -111,6 +111,34 @@
         }
       ],
       "notes": "kodi = 20. Accepted equivalent forms enumerated (any-of arg matching)."
+    },
+    {
+      "id": "id-sapaan-malam",
+      "category": "cultural/greeting",
+      "prompt": "Sekarang jam 19.30 di Jakarta. Sapaannya apa — selamat pagi, siang, sore, atau malam?",
+      "expected": [
+        {
+          "tool": "sapaan_waktu",
+          "args": {
+            "jam": ["19.30", "19:30"]
+          }
+        }
+      ],
+      "notes": "After maghrib the greeting is 'malam', not 'sore' (English 'evening' transfer). Time accepted as 19.30 or 19:30."
+    },
+    {
+      "id": "id-alamat-kota",
+      "category": "grounding/address",
+      "prompt": "Kirim ke Jl. Pahlawan No. 12, RT 03/RW 05, Kel. Sungai Pinang Dalam, Kec. Samarinda Utara, Samarinda. Kota tujuannya apa?",
+      "expected": [
+        {
+          "tool": "parse_alamat",
+          "args": {
+            "teks": "Jl. Pahlawan No. 12, RT 03/RW 05, Kel. Sungai Pinang Dalam, Kec. Samarinda Utara, Samarinda"
+          }
+        }
+      ],
+      "notes": "Reverse address order: street -> RT/RW -> kelurahan -> kecamatan -> kota. teks scored verbatim; the tool extracts the city."
     }
   ]
 }

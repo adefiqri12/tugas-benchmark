@@ -35,7 +35,7 @@ Tests are fully offline (ScriptedAgent) and never touch the gateway.
 ## Layout & conventions
 
 - `src/tugas/`: `models.py` (pydantic: Task, ExpectedCall, Trajectory, ...),
-  `tools.py` (4 deterministic mock tools), `agent.py` (LLMAgent + ScriptedAgent
+  `tools.py` (6 deterministic mock tools), `agent.py` (LLMAgent + ScriptedAgent
   behind one `Agent` Protocol), `score.py` (scoring + failure taxonomy),
   `runner.py`, `cli.py` (typer).
 - `eval/datasets/golden_id.json` — golden tasks; ground truth is hand-written.
