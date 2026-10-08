@@ -33,7 +33,7 @@ Every failure is labelled with a cause: `NO_TOOL_CALL`, `WRONG_TOOL`,
 uv venv && uv pip install -e ".[dev]"
 tugas list                        # show the golden tasks
 tugas run -m auto/best-fast       # score a model
-pytest -q                         # scorer tests (offline)
+pytest -q                         # offline tests (scorer + CLI)
 ```
 
 The runner talks to any [OI]-compatible chat endpoint that supports tool calling.
@@ -51,7 +51,7 @@ src/tugas/
   runner.py   load tasks, run agent, score, summarize
   cli.py      tugas list | run
 eval/           golden tasks (JSON)
-tests/          offline scorer tests
+tests/          offline tests (scorer + CLI)
 results/        run outputs (gitignored)
 ```
 
