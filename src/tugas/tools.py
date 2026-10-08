@@ -240,11 +240,23 @@ _REGISTRY = {
 
 
 def execute(name: str, args: dict) -> dict:
-    """Run a tool by name. Raises ToolError on bad name or arguments."""
+    """Run a tool by name. Raises ToolError on bad name or arguments.
+
+    Argument-validation failures are normalised to ToolError. The tools parse
+    dates with the stdlib (which raises ValueError) and a call with missing or
+    unexpected keyword arguments raises TypeError. Both are bad *arguments*, so
+    the harness must surface a ToolError it can feed back to the model -- not an
+    unhandled crash that the agent loop would mis-score as an API_ERROR.
+    """
     fn = _REGISTRY.get(name)
     if fn is None:
         raise ToolError(f"tool tidak dikenal: {name!r}")
-    return fn(**args)
+    try:
+        return fn(**args)
+    except ToolError:
+        raise
+    except (TypeError, ValueError) as exc:
+        raise ToolError(f"argumen tidak valid untuk {name}: {exc}") from exc
 
 
 def openai_schema() -> list[dict]:

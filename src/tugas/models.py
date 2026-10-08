@@ -20,7 +20,10 @@ class FailureType(str, Enum):
     WRONG_TOOL = "WRONG_TOOL"              # called a tool, but not the expected one
     MISSING_TOOL = "MISSING_TOOL"          # a required call never happened
     BAD_ARGS = "BAD_ARGS"                  # right tool, wrong argument value
-    HALLUCINATED_ARG = "HALLUCINATED_ARG"  # passed a field the tool does not accept
+    # Reserved: kept for schema stability, but not emitted by the scorer. Extra
+    # or unknown args are deliberately ignored (a golden call may list fewer args
+    # than the tool needs), so "hallucinated arg" is not a scored failure.
+    HALLUCINATED_ARG = "HALLUCINATED_ARG"
     EXTRA_TOOL = "EXTRA_TOOL"              # called an unexpected extra tool
     ORDER_ERROR = "ORDER_ERROR"            # right calls, wrong order
     API_ERROR = "API_ERROR"                # provider/transport failure

@@ -121,6 +121,30 @@ def test_llm_agent_feeds_tool_error_back(monkeypatch):
     assert traj.final_text == "tidak bisa."
 
 
+def test_llm_agent_malformed_call_is_not_api_error(monkeypatch):
+    # A tool call with missing args is the agent's fault, not the provider's.
+    # execute() normalises it to ToolError, so the loop feeds the error back and
+    # the trajectory scores as BAD_ARGS -- never API_ERROR.
+    seen: dict = {}
+    _install(
+        monkeypatch,
+        [
+            _tool_call("c1", "parse_tanggal", {}),  # missing required `teks`
+            _answer("maaf, saya salah panggil."),
+        ],
+        seen,
+    )
+    task = Task(id="b", prompt="p", expected=[ExpectedCall(tool="parse_tanggal", args={"teks": "besok"})])
+
+    traj = agent.LLMAgent("mock").run(task)
+
+    assert traj.error is None
+    assert "error" in json.loads(seen["tool_msgs"][0])
+    result = score_task(task, "mock", traj)
+    assert result.failure != FailureType.API_ERROR
+    assert result.failure == FailureType.BAD_ARGS
+
+
 def test_llm_agent_transport_failure_is_api_error(monkeypatch):
     def boom(*_args, **_kwargs):
         raise RuntimeError("connection refused")

@@ -6,6 +6,7 @@ import pytest
 
 from tugas.tools import (
     ToolError,
+    execute,
     parse_alamat,
     parse_tanggal,
     sapaan_waktu,
@@ -114,3 +115,32 @@ def test_parse_alamat_without_commas_raises() -> None:
 def test_parse_alamat_all_subcity_raises() -> None:
     with pytest.raises(ToolError):
         parse_alamat("Jl. A, Kel. B, Kec. C")
+
+
+# -- execute: bad arguments must surface as ToolError ------------------------
+
+
+@pytest.mark.parametrize(
+    "name,args",
+    [
+        ("parse_tanggal", {}),  # missing required arg -> TypeError
+        ("parse_tanggal", {"teks": "besok", "bogus": 1}),  # unexpected kwarg
+        ("cari_penerbangan", {"asal": "A", "tujuan": "B", "tanggal": "2026-13-40"}),
+        ("cek_cuaca", {"kota": "X", "tanggal_mulai": "nope", "tanggal_selesai": "2026-10-10"}),
+    ],
+)
+def test_execute_bad_args_raise_tool_error(name: str, args: dict) -> None:
+    # Missing/extra kwargs (TypeError) and stdlib date errors (ValueError) are
+    # bad arguments, not provider failures; they must be normalised to ToolError
+    # so the agent loop feeds them back instead of scoring API_ERROR.
+    with pytest.raises(ToolError):
+        execute(name, args)
+
+
+def test_execute_unknown_tool_raises_tool_error() -> None:
+    with pytest.raises(ToolError):
+        execute("tidak_ada", {})
+
+
+def test_execute_valid_call_passes_through() -> None:
+    assert execute("parse_tanggal", {"teks": "besok"})["tanggal"] == "2026-10-08"
