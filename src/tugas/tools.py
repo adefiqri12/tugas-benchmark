@@ -243,10 +243,12 @@ def execute(name: str, args: dict) -> dict:
     """Run a tool by name. Raises ToolError on bad name or arguments.
 
     Argument-validation failures are normalised to ToolError. The tools parse
-    dates with the stdlib (which raises ValueError) and a call with missing or
-    unexpected keyword arguments raises TypeError. Both are bad *arguments*, so
-    the harness must surface a ToolError it can feed back to the model -- not an
-    unhandled crash that the agent loop would mis-score as an API_ERROR.
+    dates with the stdlib (which raises ValueError), call with missing or
+    unexpected keyword arguments raises TypeError, and a non-string value where
+    a string is expected raises AttributeError (`.strip()` on an int). All three
+    are bad *arguments*, so the harness must surface a ToolError it can feed back
+    to the model -- not an unhandled crash that the agent loop would mis-score as
+    an API_ERROR.
     """
     fn = _REGISTRY.get(name)
     if fn is None:
@@ -255,7 +257,7 @@ def execute(name: str, args: dict) -> dict:
         return fn(**args)
     except ToolError:
         raise
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, AttributeError) as exc:
         raise ToolError(f"argumen tidak valid untuk {name}: {exc}") from exc
 
 

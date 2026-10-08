@@ -125,6 +125,8 @@ def test_parse_alamat_all_subcity_raises() -> None:
     [
         ("parse_tanggal", {}),  # missing required arg -> TypeError
         ("parse_tanggal", {"teks": "besok", "bogus": 1}),  # unexpected kwarg
+        ("parse_tanggal", {"teks": 123}),  # non-string arg -> AttributeError
+        ("sapaan_waktu", {"jam": 123}),  # non-string arg -> AttributeError
         ("cari_penerbangan", {"asal": "A", "tujuan": "B", "tanggal": "2026-13-40"}),
         ("cek_cuaca", {"kota": "X", "tanggal_mulai": "nope", "tanggal_selesai": "2026-10-10"}),
     ],
