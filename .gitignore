@@ -5,3 +5,4 @@ __pycache__/
 results/
 *.egg-info/
 .zed/
+planning/
