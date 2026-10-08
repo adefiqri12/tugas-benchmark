@@ -102,3 +102,15 @@ def test_parse_alamat_with_province() -> None:
 def test_parse_alamat_empty_raises() -> None:
     with pytest.raises(ToolError):
         parse_alamat("")
+
+
+def test_parse_alamat_without_commas_raises() -> None:
+    # No commas -> the whole string looks like one street component; there is
+    # no city to return, so it must fail loudly, not echo the address back.
+    with pytest.raises(ToolError):
+        parse_alamat("Jl. Pahlawan No. 12 RT 03 Samarinda")
+
+
+def test_parse_alamat_all_subcity_raises() -> None:
+    with pytest.raises(ToolError):
+        parse_alamat("Jl. A, Kel. B, Kec. C")

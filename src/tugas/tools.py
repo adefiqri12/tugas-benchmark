@@ -214,7 +214,9 @@ def parse_alamat(teks: str) -> dict:
 
     Limits: it does not know province names, so it cannot tell a city from a
     province if a city field is missing; and it needs commas between the
-    address parts. Kept intentionally simple and offline.
+    address parts. When no city component can be identified it raises
+    ``ToolError`` rather than returning a non-city token. Kept intentionally
+    simple and offline.
     """
     parts = [p.strip() for p in (teks or "").split(",") if p.strip()]
     if not parts:
@@ -222,8 +224,9 @@ def parse_alamat(teks: str) -> dict:
     for p in parts:
         if not _NON_KOTA_PREFIX.match(p):
             return {"teks": teks, "kota": p}
-    # Everything looked like a sub-city component; fall back to the last part.
-    return {"teks": teks, "kota": parts[-1]}
+    # Every component looked like a street / RT-RW / kelurahan / kecamatan:
+    # there is no city to return. Fail loudly instead of returning a non-city.
+    raise ToolError(f"kota tidak ditemukan pada alamat: {teks!r}")
 
 
 _REGISTRY = {
