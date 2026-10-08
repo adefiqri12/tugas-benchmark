@@ -39,8 +39,20 @@ def _norm(v: object) -> str:
     return s
 
 
+def _arg_matches(expected_v: object, actual_v: object) -> bool:
+    """One expected arg value against one actual value.
+
+    A list/tuple expected value is *any-of*: the actual value matches when it
+    equals (after `_norm`) any element. A scalar keeps the exact-match behavior.
+    """
+    actual = _norm(actual_v)
+    if isinstance(expected_v, (list, tuple)):
+        return any(actual == _norm(e) for e in expected_v)
+    return actual == _norm(expected_v)
+
+
 def _args_ok(expected: dict, got: dict) -> bool:
-    return all(k in got and _norm(got[k]) == _norm(v) for k, v in expected.items())
+    return all(k in got and _arg_matches(v, got[k]) for k, v in expected.items())
 
 
 def _subsequence(expected: list[ExpectedCall], calls: list[ToolCallRecord]):
@@ -101,7 +113,7 @@ def score_task(task: Task, model: str, traj: Trajectory) -> TaskResult:
         cand = next((c for c in calls if c.tool == e.tool), None)
         if cand:
             m += sum(1 for k, v in e.args.items()
-                     if k in cand.args and _norm(cand.args[k]) == _norm(v))
+                     if k in cand.args and _arg_matches(v, cand.args[k]))
         t += len(e.args)
     arg_accuracy = m / t if t else 1.0
 

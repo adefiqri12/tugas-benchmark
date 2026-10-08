@@ -8,6 +8,7 @@ own arguments and returns a JSON-able dict.
 from __future__ import annotations
 
 import datetime as _dt
+import re as _re
 
 from .models import ToolSpec
 
@@ -49,6 +50,24 @@ TOOL_SPECS: list[ToolSpec] = [
         parameters={"ekspresi": "string (mis. '1200000 - 150000')"},
         required=["ekspresi"],
     ),
+    ToolSpec(
+        name="sapaan_waktu",
+        description=(
+            "Tentukan sapaan waktu Bahasa Indonesia yang tepat untuk sebuah jam: "
+            "pagi, siang, sore, atau malam. Pakai sebelum menyapa pengguna."
+        ),
+        parameters={"jam": "string (format HH:MM, mis. '19:30')"},
+        required=["jam"],
+    ),
+    ToolSpec(
+        name="parse_alamat",
+        description=(
+            "Ambil nama KOTA dari sebuah alamat Bahasa Indonesia. Gunakan saat perlu "
+            "mengetahui kota pengiriman/tujuan dari teks alamat."
+        ),
+        parameters={"teks": "string (alamat lengkap)"},
+        required=["teks"],
+    ),
 ]
 
 
@@ -65,6 +84,11 @@ _BULAN = {
 
 _DEFAULT_TODAY = _dt.date(2026, 10, 7)  # fixed anchor -> reproducible evals
 
+# Indonesian DD/MM numeric dates. Loose match detects "looks numeric"; strict
+# fullmatch requires a 4-digit year (two-digit years are rejected on purpose).
+_NUMERIC_DATE = _re.compile(r"(\d{1,2})/(\d{1,2})(?:/(\d{1,4}))?")
+_NUMERIC_DATE_STRICT = _re.compile(r"(\d{1,2})/(\d{1,2})(?:/(\d{4}))?")
+
 
 def parse_tanggal(teks: str, acuan: str | None = None) -> dict:
     base = _dt.date.fromisoformat(acuan) if acuan else _DEFAULT_TODAY
@@ -74,10 +98,26 @@ def parse_tanggal(teks: str, acuan: str | None = None) -> dict:
         d = base
     elif t in ("besok", "esok"):
         d = base + _dt.timedelta(days=1)
+    elif t in ("lusa",):
+        d = base + _dt.timedelta(days=2)
     elif t in ("kemarin",):
         d = base - _dt.timedelta(days=1)
     elif "minggu depan" in t or "pekan depan" in t:
         d = base + _dt.timedelta(days=7)
+    elif _NUMERIC_DATE.search(t):
+        # Indonesian DD/MM numeric dates, tried before the word-date branch.
+        # "7/10" -> 7 Oct, "7/10/2026" -> explicit year, "07/10" allowed.
+        m = _NUMERIC_DATE_STRICT.fullmatch(t)
+        if m is None:
+            # Looks numeric but the year is not four digits (e.g. "7/10/26").
+            raise ToolError(f"tidak bisa memahami tanggal: {teks!r}")
+        day = int(m.group(1))
+        month = int(m.group(2))
+        year = int(m.group(3)) if m.group(3) else base.year
+        try:
+            d = _dt.date(year, month, day)  # calendar validates 31/2, 7/13
+        except ValueError as exc:
+            raise ToolError(f"tidak bisa memahami tanggal: {teks!r}") from exc
     else:
         # "12 Oktober 2026" / "12 oktober 2026"
         parts = t.replace(",", "").split()
@@ -130,11 +170,69 @@ def hitung(ekspresi: str) -> dict:
     return {"ekspresi": ekspresi, "hasil": val}
 
 
+def sapaan_waktu(jam: str) -> dict:
+    """Indonesian time-of-day greeting for a clock time (HH:MM).
+
+    Boundaries: pagi 04:00-10:59, siang 11:00-14:59, sore 15:00-17:59,
+    malam 18:00-03:59 (after maghrib it is malam, not sore).
+    """
+    t = (jam or "").strip()
+    m = _re.fullmatch(r"(\d{1,2})[:.](\d{2})", t)
+    if m is None:
+        raise ToolError(f"format jam tidak dikenal: {jam!r} (pakai HH:MM)")
+    h, mi = int(m.group(1)), int(m.group(2))
+    if h > 23 or mi > 59:
+        raise ToolError(f"jam tidak valid: {jam!r}")
+    total = h * 60 + mi
+    if 4 * 60 <= total <= 10 * 60 + 59:
+        sapaan, waktu = "Selamat pagi", "pagi"
+    elif 11 * 60 <= total <= 14 * 60 + 59:
+        sapaan, waktu = "Selamat siang", "siang"
+    elif 15 * 60 <= total <= 17 * 60 + 59:
+        sapaan, waktu = "Selamat sore", "sore"
+    else:  # 18:00-23:59 and 00:00-03:59
+        sapaan, waktu = "Selamat malam", "malam"
+    return {"jam": jam, "waktu": waktu, "sapaan": sapaan}
+
+
+# Prefixes that mark a non-city address component (street / RT-RW / kelurahan /
+# kecamatan). The kota is the first comma-separated component that survives
+# this filter (order: ... kecamatan, kota, provinsi).
+_NON_KOTA_PREFIX = _re.compile(
+    r"^(jl\.?|jalan|gg\.?|gang|no\.?|nomor|rt|rw|kel\.?|kelurahan|"
+    r"kec\.?|kecamatan)\b",
+    _re.IGNORECASE,
+)
+
+
+def parse_alamat(teks: str) -> dict:
+    """Extract the KOTA (city) from an Indonesian address.
+
+    Heuristic: split on commas, drop components that start with a street /
+    RT-RW / Kel. / Kec. prefix, and return the first remaining component (the
+    city precedes the province in the conventional order).
+
+    Limits: it does not know province names, so it cannot tell a city from a
+    province if a city field is missing; and it needs commas between the
+    address parts. Kept intentionally simple and offline.
+    """
+    parts = [p.strip() for p in (teks or "").split(",") if p.strip()]
+    if not parts:
+        raise ToolError(f"alamat kosong: {teks!r}")
+    for p in parts:
+        if not _NON_KOTA_PREFIX.match(p):
+            return {"teks": teks, "kota": p}
+    # Everything looked like a sub-city component; fall back to the last part.
+    return {"teks": teks, "kota": parts[-1]}
+
+
 _REGISTRY = {
     "parse_tanggal": parse_tanggal,
     "cari_penerbangan": cari_penerbangan,
     "cek_cuaca": cek_cuaca,
     "hitung": hitung,
+    "sapaan_waktu": sapaan_waktu,
+    "parse_alamat": parse_alamat,
 }
 
 

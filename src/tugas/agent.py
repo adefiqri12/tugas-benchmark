@@ -116,4 +116,18 @@ class ScriptedAgent:
 
     def run(self, task: Task) -> Trajectory:
         calls = self.plan.get(task.id, [])
-        return Trajectory(calls=list(calls), final_text="(scripted)")
+        return Trajectory(calls=[_replay(c) for c in calls], final_text="(scripted)")
+
+
+def _replay(call: ToolCallRecord) -> ToolCallRecord:
+    """Materialise a planned call for replay.
+
+    Golden args may be any-of lists (a scoring spec, not a replayable call); a
+    replayed call needs a concrete value, so a list arg collapses to its first
+    element. Scalars pass through untouched.
+    """
+    args = {
+        k: (v[0] if isinstance(v, (list, tuple)) and v else v)
+        for k, v in call.args.items()
+    }
+    return ToolCallRecord(tool=call.tool, args=args)

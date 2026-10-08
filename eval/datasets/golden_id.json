@@ -69,6 +69,48 @@
         }
       ],
       "notes": "Single-step relative date."
+    },
+    {
+      "id": "id-tanggal-lusa",
+      "category": "date-resolution",
+      "prompt": "Meeting-ku lusa, tanggal berapa?",
+      "expected": [
+        {
+          "tool": "parse_tanggal",
+          "args": {
+            "teks": "lusa"
+          }
+        }
+      ],
+      "notes": "'lusa' is anchor +2 days, not +1; models collapse it to 'besok'."
+    },
+    {
+      "id": "id-tanggal-ddmm",
+      "category": "date-resolution",
+      "prompt": "Tiketnya tanggal 7/10. Itu 7 Oktober atau 10 Juli?",
+      "expected": [
+        {
+          "tool": "parse_tanggal",
+          "args": {
+            "teks": "7/10"
+          }
+        }
+      ],
+      "notes": "DD/MM convention: 7/10 resolves to 2026-10-07, not MM/DD."
+    },
+    {
+      "id": "id-satuan-kodi",
+      "category": "arithmetic/local-units",
+      "prompt": "Saya beli 2 kodi telur, pecah 3 butir. Sisa berapa butir?",
+      "expected": [
+        {
+          "tool": "hitung",
+          "args": {
+            "ekspresi": ["2 * 20 - 3", "40 - 3"]
+          }
+        }
+      ],
+      "notes": "kodi = 20. Accepted equivalent forms enumerated (any-of arg matching)."
     }
   ]
 }

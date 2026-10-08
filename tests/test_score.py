@@ -124,3 +124,32 @@ def test_summarize_and_scripted_agent():
     assert s["tasks"] == 1
     assert s["exact_match_rate"] == 1.0
     assert s["failures"] == {"OK": 1}
+
+
+KODI = Task(
+    id="kodi",
+    prompt="Saya beli 2 kodi telur, pecah 3 butir. Sisa berapa butir?",
+    expected=[ExpectedCall(tool="hitung", args={"ekspresi": ["2 * 20 - 3", "40 - 3"]})],
+)
+
+
+def test_any_of_arg_matches_each_acceptable_form():
+    for form in ("40 - 3", "2 * 20 - 3"):
+        traj = Trajectory(calls=[ToolCallRecord(tool="hitung", args={"ekspresi": form})])
+        r = score_task(KODI, "m", traj)
+        assert r.failure == FailureType.OK, form
+        assert r.arg_accuracy == 1.0, form
+
+
+def test_any_of_arg_rejects_non_member():
+    traj = Trajectory(calls=[ToolCallRecord(tool="hitung", args={"ekspresi": "2 * 12 - 3"})])
+    r = score_task(KODI, "m", traj)
+    assert r.failure == FailureType.BAD_ARGS
+    assert r.arg_accuracy == 0.0
+
+
+def test_scripted_agent_replays_first_element_of_list_arg():
+    plan = {"kodi": [ToolCallRecord(tool="hitung", args={"ekspresi": ["2 * 20 - 3", "40 - 3"]})]}
+    results = run_agent(ScriptedAgent("scripted", plan), [KODI])
+    assert results[0].failure == FailureType.OK
+    assert results[0].arg_accuracy == 1.0
