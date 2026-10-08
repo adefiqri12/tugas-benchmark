@@ -51,15 +51,15 @@ src/tugas/
   runner.py   load tasks, run agent, score, summarize
   cli.py      tugas list | run
 eval/           golden tasks (JSON)
-tests/          offline tests (scorer + CLI)
+tests/          offline tests (tools, scorer, agent loop, CLI)
 results/        run outputs (gitignored)
 ```
 
 ## Status
 
-Phase 1 (scaffold + first numbers). The harness runs end-to-end and prints a score
-table. Next: grow the task set to 30-50, add an LLM-judge for the final answer,
-deploy a public leaderboard.
+Phase 2 (broaden coverage). The harness runs end-to-end and prints a score
+table; the golden set is 9 tasks over 6 tools. Next: grow the task set to 30-50,
+add an LLM-judge for the final answer, deploy a public leaderboard.
 
 ## Design note
 

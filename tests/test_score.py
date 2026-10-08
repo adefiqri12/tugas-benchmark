@@ -134,6 +134,35 @@ def test_summarize_empty_keeps_all_keys():
                  "arg_accuracy": 0.0, "avg_steps": 0.0, "failures": {}}
 
 
+def test_arg_matching_tolerates_case_and_whitespace():
+    # Documented tolerance: a model that copies an address with different
+    # spacing or case still matches (the whole point of `_norm`).
+    task = Task(
+        id="alamat",
+        prompt="p",
+        expected=[ExpectedCall(tool="parse_alamat", args={"teks": "Jl. A No. 12, Kel. B, Samarinda"})],
+    )
+    for variant in (
+        "Jl. A No. 12, Kel. B, Samarinda",
+        "jl. a no. 12,  kel. b, samarinda",
+        "  Jl. A No. 12, Kel. B, Samarinda  ",
+    ):
+        traj = Trajectory(calls=[ToolCallRecord(tool="parse_alamat", args={"teks": variant})])
+        assert score_task(task, "m", traj).failure == FailureType.OK, variant
+
+
+def test_arg_matching_is_punctuation_sensitive():
+    # Known limit (documented in tasks.md): `_norm` does not touch punctuation,
+    # so "No.12" does not match "No. 12". Pinned so any change is deliberate.
+    task = Task(
+        id="alamat",
+        prompt="p",
+        expected=[ExpectedCall(tool="parse_alamat", args={"teks": "Jl. A No. 12, Samarinda"})],
+    )
+    traj = Trajectory(calls=[ToolCallRecord(tool="parse_alamat", args={"teks": "Jl. A No.12, Samarinda"})])
+    assert score_task(task, "m", traj).failure == FailureType.BAD_ARGS
+
+
 KODI = Task(
     id="kodi",
     prompt="Saya beli 2 kodi telur, pecah 3 butir. Sisa berapa butir?",
