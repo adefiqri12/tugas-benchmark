@@ -146,3 +146,29 @@ def test_execute_unknown_tool_raises_tool_error() -> None:
 
 def test_execute_valid_call_passes_through() -> None:
     assert execute("parse_tanggal", {"teks": "besok"})["tanggal"] == "2026-10-08"
+
+
+# -- hitung: bounded, numeric-only results -----------------------------------
+
+
+@pytest.mark.parametrize(
+    "ekspresi",
+    [
+        "9**9**9",  # exponent bomb: would hang the harness
+        "2**100000000",  # huge int: would overflow JSON serialisation
+        "()",  # eval returns a tuple, not a number
+    ],
+)
+def test_hitung_rejects_unbounded_or_non_numeric(ekspresi: str) -> None:
+    with pytest.raises(ToolError):
+        execute("hitung", {"ekspresi": ekspresi})
+
+
+def test_hitung_rejects_overlong_expression() -> None:
+    with pytest.raises(ToolError):
+        execute("hitung", {"ekspresi": "1" * 201})
+
+
+def test_hitung_still_computes_normally() -> None:
+    assert execute("hitung", {"ekspresi": "1200000 - 150000"})["hasil"] == 1050000
+    assert execute("hitung", {"ekspresi": "2 * 20 - 3"})["hasil"] == 37

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from tugas.agent import ScriptedAgent
 from tugas.cli import default_tasks_path
 from tugas.models import FailureType, ToolCallRecord
@@ -26,6 +28,15 @@ def test_golden_dataset_has_nine_tasks() -> None:
     tasks = load_tasks(default_tasks_path())
     assert len(tasks) == 9, f"expected 9 golden tasks, got {len(tasks)}"
     assert all(t.expected for t in tasks), "every task needs a non-empty expected trace"
+
+
+def test_load_tasks_reports_malformed_dataset(tmp_path) -> None:
+    # A typo or truncated file should raise a clear ValueError, not a raw
+    # KeyError/JSONDecodeError traceback out of the public loader.
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"meta": {}}', encoding="utf-8")
+    with pytest.raises(ValueError, match="gagal memuat golden tasks"):
+        load_tasks(bad)
 
 
 def test_golden_dataset_includes_new_task_ids() -> None:

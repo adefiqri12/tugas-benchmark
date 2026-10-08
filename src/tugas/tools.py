@@ -163,10 +163,19 @@ def hitung(ekspresi: str) -> dict:
     allowed = set("0123456789+-*/(). ")
     if not set(ekspresi) <= allowed:
         raise ToolError(f"ekspresi tidak diizinkan: {ekspresi!r}")
+    # `**` is rejected: `9**9**9` builds a 369-million-digit integer and hangs
+    # the process, and `2**100000000` overflows JSON serialisation. A mock
+    # calculator for money/quantities does not need exponentiation.
+    if "**" in ekspresi:
+        raise ToolError(f"pangkat tidak diizinkan: {ekspresi!r}")
+    if len(ekspresi) > 200:
+        raise ToolError(f"ekspresi terlalu panjang ({len(ekspresi)} karakter)")
     try:
         val = eval(ekspresi, {"__builtins__": {}}, {})  # noqa: S307 - charset-guarded
     except Exception as exc:  # noqa: BLE001
         raise ToolError(f"gagal menghitung: {ekspresi!r}") from exc
+    if isinstance(val, bool) or not isinstance(val, (int, float)):
+        raise ToolError(f"hasil bukan angka: {ekspresi!r}")
     return {"ekspresi": ekspresi, "hasil": val}
 
 
