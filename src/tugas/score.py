@@ -131,7 +131,9 @@ def summarize(results: list[TaskResult]) -> dict:
     """Aggregate a model's results into headline numbers + a failure histogram."""
     n = len(results)
     if n == 0:
-        return {"tasks": 0}
+        # Keep the shape stable so callers (e.g. the CLI) can index every key.
+        return {"tasks": 0, "exact_match_rate": 0.0, "tool_selection": 0.0,
+                "arg_accuracy": 0.0, "avg_steps": 0.0, "failures": {}}
     fails: dict[str, int] = {}
     for r in results:
         fails[r.failure.value] = fails.get(r.failure.value, 0) + 1

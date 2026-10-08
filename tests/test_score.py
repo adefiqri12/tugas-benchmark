@@ -126,6 +126,14 @@ def test_summarize_and_scripted_agent():
     assert s["failures"] == {"OK": 1}
 
 
+def test_summarize_empty_keeps_all_keys():
+    # An empty dataset must still expose every headline key, so consumers like
+    # the CLI can index them without a KeyError.
+    s = summarize([])
+    assert s == {"tasks": 0, "exact_match_rate": 0.0, "tool_selection": 0.0,
+                 "arg_accuracy": 0.0, "avg_steps": 0.0, "failures": {}}
+
+
 KODI = Task(
     id="kodi",
     prompt="Saya beli 2 kodi telur, pecah 3 butir. Sisa berapa butir?",
