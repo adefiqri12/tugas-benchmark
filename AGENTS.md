@@ -4,7 +4,8 @@ TUGAS (Tool-Use and Grounded Agent Score) — eval harness + planned leaderboard
 for tool-calling AI agents in Bahasa Indonesia. Scores an agent's tool-call
 *trajectory* (tool choice, args, order) against hand-written golden traces, not
 just final text. Phase 1 (scaffold) is done; roadmap lives in
-`planning/HANDOFF.md` (local, gitignored — not shipped in the repo).
+`planning/roadmap.md` (local, gitignored — not shipped in the repo). Task
+backlog: `planning/tasks.md`.
 
 ## Dev environment
 
