@@ -57,7 +57,10 @@ Tests are fully offline (ScriptedAgent) and never touch the gateway.
   tighten this to exact-list matching — it's deliberate.
 - Arg matching normalizes thousands separators and operator spacing
   (`"1.200.000 - 150.000"` == `"1200000-150000"`); only args listed in the
-  golden JSON are scored, omitted optional args are not.
+  golden JSON are scored, and extra args the agent supplies are ignored. A
+  golden call may therefore list fewer args than the tool needs to execute
+  (e.g. `cek_cuaca` scores only `kota`, not the required dates), so a golden
+  trace is a scoring spec, not a replayable call.
 
 ## Pitfalls
 

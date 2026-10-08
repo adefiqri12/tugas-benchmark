@@ -90,6 +90,22 @@ def test_rupiah_normalisation():
     assert score_task(task, "m", traj).failure == FailureType.OK
 
 
+def test_extra_args_are_ignored():
+    # golden scores only `kota`; an agent that also supplies the required dates
+    # must still score OK (extra args the agent adds are not penalised).
+    traj = Trajectory(calls=[
+        ToolCallRecord(tool="parse_tanggal", args={"teks": "minggu depan"}),
+        ToolCallRecord(tool="cek_cuaca", args={
+            "kota": "Samarinda",
+            "tanggal_mulai": "2026-10-14",
+            "tanggal_selesai": "2026-10-20",
+        }),
+    ])
+    r = score_task(TASK, "m", traj)
+    assert r.failure == FailureType.OK
+    assert r.arg_accuracy == 1.0
+
+
 def test_api_error_path():
     r = score_task(TASK, "m", Trajectory(error="ConnectError: refused"))
     assert r.failure == FailureType.API_ERROR
