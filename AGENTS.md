@@ -3,7 +3,8 @@
 TUGAS (Tool-Use and Grounded Agent Score) — eval harness + planned leaderboard
 for tool-calling AI agents in Bahasa Indonesia. Scores an agent's tool-call
 *trajectory* (tool choice, args, order) against hand-written golden traces, not
-just final text. Phase 1 (scaffold) is done; roadmap lives in HANDOFF.md.
+just final text. Phase 1 (scaffold) is done; roadmap lives in
+`planning/HANDOFF.md` (local, gitignored — not shipped in the repo).
 
 ## Dev environment
 
@@ -36,6 +37,9 @@ Tests are fully offline (ScriptedAgent) and never touch the gateway.
   behind one `Agent` Protocol), `score.py` (scoring + failure taxonomy),
   `runner.py`, `cli.py` (typer).
 - `eval/datasets/golden_id.json` — golden tasks; ground truth is hand-written.
+  Canonical on disk; also force-included into the wheel as
+  `tugas/data/golden_id.json` so an installed `tugas` finds it from any cwd
+  (`cli.default_tasks_path()`).
 - Data models are pydantic v2 `BaseModel`; enums are `str, Enum`.
 - Code and docstrings in English; task prompts, tool descriptions, and the
   agent system prompt are in Indonesian.

@@ -19,10 +19,34 @@ console = Console()
 DEFAULT_TASKS = "eval/datasets/golden_id.json"
 
 
+def default_tasks_path() -> str:
+    """Locate the golden dataset regardless of the working directory.
+
+    Installed wheels ship the dataset as ``tugas/data/golden_id.json`` (see the
+    ``force-include`` entry in ``pyproject.toml``), so the CLI works from any
+    cwd. In a source checkout we fall back to the canonical
+    ``eval/datasets/golden_id.json`` next to the repo root.
+    """
+    try:
+        from importlib.resources import files
+
+        packaged = files("tugas").joinpath("data", "golden_id.json")
+        if packaged.is_file():
+            return str(packaged)
+    except (ModuleNotFoundError, FileNotFoundError):
+        pass
+
+    source_tree = Path(__file__).resolve().parents[2] / DEFAULT_TASKS
+    if source_tree.is_file():
+        return str(source_tree)
+
+    return DEFAULT_TASKS
+
+
 @app.command("list")
-def list_tasks(path: str = DEFAULT_TASKS) -> None:
+def list_tasks(path: str | None = typer.Argument(None, help="path to golden tasks JSON")) -> None:
     """Show the golden tasks."""
-    tasks = load_tasks(path)
+    tasks = load_tasks(path or default_tasks_path())
     t = Table(title=f"tasks ({len(tasks)})")
     t.add_column("id")
     t.add_column("category")
@@ -41,11 +65,11 @@ def list_tasks(path: str = DEFAULT_TASKS) -> None:
 @app.command("run")
 def run(
     models: str = typer.Option(..., "--model", "-m", help="comma-separated model ids"),
-    path: str = DEFAULT_TASKS,
+    path: str | None = typer.Argument(None, help="path to golden tasks JSON"),
     out: str | None = typer.Option(None, "--out", help="write results JSON here"),
 ) -> None:
     """Run one or more models over the golden tasks and print a score table."""
-    tasks = load_tasks(path)
+    tasks = load_tasks(path or default_tasks_path())
     all_results = []
     for mid in [m.strip() for m in models.split(",") if m.strip()]:
         agent = LLMAgent(model=mid)
