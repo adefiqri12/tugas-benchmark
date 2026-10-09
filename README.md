@@ -59,7 +59,8 @@ results/        run outputs (gitignored)
 
 Phase 2 (broaden coverage). The harness runs end-to-end and prints a score
 table; the golden set is 9 tasks over 6 tools. Next: grow the task set to 30-50,
-add an LLM-judge for the final answer, deploy a public leaderboard.
+deploy a public leaderboard. Scoring is fully mechanical — no LLM-judge; even
+free-text answers are scored against hand-written accepted forms (any-of).
 
 ## Design note
 
