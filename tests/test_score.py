@@ -190,3 +190,71 @@ def test_scripted_agent_replays_first_element_of_list_arg():
     results = run_agent(ScriptedAgent("scripted", plan), [KODI])
     assert results[0].failure == FailureType.OK
     assert results[0].arg_accuracy == 1.0
+
+
+DUP = Task(
+    id="dup",
+    prompt="Berapa 2+2, lalu 3*3?",
+    expected=[
+        ExpectedCall(tool="hitung", args={"ekspresi": "2+2"}),
+        ExpectedCall(tool="hitung", args={"ekspresi": "3*3"}),
+    ],
+)
+
+
+def test_duplicate_expected_tools_perfect_trace_is_ok():
+    # The same tool twice in the expected trace: each occurrence matches its
+    # own call (the old scorer mislabelled this ORDER_ERROR).
+    traj = Trajectory(calls=[
+        ToolCallRecord(tool="hitung", args={"ekspresi": "2+2"}),
+        ToolCallRecord(tool="hitung", args={"ekspresi": "3*3"}),
+    ])
+    r = score_task(DUP, "m", traj)
+    assert r.failure == FailureType.OK
+    assert r.tool_selection == 1.0
+    assert r.arg_accuracy == 1.0
+    assert r.exact_match is True
+
+
+def test_duplicate_expected_tools_partial_is_missing_tool():
+    # Only the first call happened: MISSING_TOOL, not ORDER_ERROR.
+    traj = Trajectory(calls=[ToolCallRecord(tool="hitung", args={"ekspresi": "2+2"})])
+    r = score_task(DUP, "m", traj)
+    assert r.failure == FailureType.MISSING_TOOL
+    # tool_selection counts per-occurrence, not per-unique-name (old scorer
+    # double-counted: 2 unique-name hits / 2 expected = 1.0).
+    assert r.tool_selection == 0.5
+
+
+def test_duplicate_expected_tools_args_scored_per_call():
+    # Second occurrence has wrong args: BAD_ARGS with arg_accuracy 0.5 (old
+    # scorer compared both expected args against the first call's args).
+    traj = Trajectory(calls=[
+        ToolCallRecord(tool="hitung", args={"ekspresi": "2+2"}),
+        ToolCallRecord(tool="hitung", args={"ekspresi": "9"}),
+    ])
+    r = score_task(DUP, "m", traj)
+    assert r.failure == FailureType.BAD_ARGS
+    assert r.arg_accuracy == 0.5
+
+
+NO_TOOL = Task(id="no_tool", prompt="Jawab tanpa tool.", expected=[])
+
+
+def test_no_tool_task_abstaining_is_ok():
+    # expected=[] means a correct agent calls nothing at all.
+    r = score_task(NO_TOOL, "m", Trajectory())
+    assert r.failure == FailureType.OK
+    assert r.tool_selection == 1.0
+    assert r.arg_accuracy == 1.0
+    assert r.exact_match is True
+
+
+def test_no_tool_task_calling_anyway_is_wrong_tool():
+    # A no-tool task exists to catch the discipline failure (the Phase 1
+    # lesson: answering "besok tanggal berapa?" from a guess). Calling any
+    # tool is a failure, not a tolerated extra.
+    traj = Trajectory(calls=[ToolCallRecord(tool="hitung", args={"ekspresi": "1+1"})])
+    r = score_task(NO_TOOL, "m", traj)
+    assert r.failure == FailureType.WRONG_TOOL
+    assert r.exact_match is False

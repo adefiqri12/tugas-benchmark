@@ -55,10 +55,14 @@ def _args_ok(expected: dict, got: dict) -> bool:
     return all(k in got and _arg_matches(v, got[k]) for k, v in expected.items())
 
 
-def _subsequence(expected: list[ExpectedCall], calls: list[ToolCallRecord]):
-    """Walk `expected` as an ordered subsequence of `calls`.
+def _match_subsequence(expected: list[ExpectedCall], calls: list[ToolCallRecord]):
+    """Greedy left-to-right matching of `expected` as an ordered subsequence
+    of `calls` (tool name only; args are checked by the caller).
 
-    Returns (matched_pairs, all_args_ok).
+    Greedy leftmost assignment maximises the number of matched expected calls:
+    each expected call takes the earliest usable slot, never blocking a later
+    match. Returns the matched (expected, actual) pairs — a partial match is
+    fine; the caller decides what an incomplete match means.
     """
     j = 0
     matched: list[tuple[ExpectedCall, ToolCallRecord]] = []
@@ -66,26 +70,39 @@ def _subsequence(expected: list[ExpectedCall], calls: list[ToolCallRecord]):
         while j < len(calls) and calls[j].tool != e.tool:
             j += 1
         if j >= len(calls):
-            return matched, False
+            break
         matched.append((e, calls[j]))
         j += 1
-    all_args = all(_args_ok(e.args, g.args) for e, g in matched)
-    return matched, all_args
+    return matched
 
 
 def _classify(expected: list[ExpectedCall], calls: list[ToolCallRecord]) -> FailureType:
+    if not expected:
+        # A task may require no tool at all ("answer without a tool"): no
+        # calls is exactly right; any call is a discipline failure — the
+        # exact lesson of Phase 1 ("besok tanggal berapa?" answered from a
+        # guess). WRONG_TOOL, not the tolerated EXTRA_TOOL.
+        return FailureType.OK if not calls else FailureType.WRONG_TOOL
     if not calls:
         return FailureType.NO_TOOL_CALL
     exp_tools = {e.tool for e in expected}
     got_tools = {c.tool for c in calls}
     if not (exp_tools & got_tools):
         return FailureType.WRONG_TOOL
-    if not exp_tools <= got_tools:
-        return FailureType.MISSING_TOOL
-    matched, args_ok = _subsequence(expected, calls)
+    matched = _match_subsequence(expected, calls)
     if len(matched) < len(expected):
+        # Incomplete subsequence. MISSING_TOOL when some expected call never
+        # happened (the tool fired fewer times than expected — includes the
+        # duplicate-tools case, where the old scorer mislabelled this
+        # ORDER_ERROR). ORDER_ERROR only when every expected call exists with
+        # the right multiplicity but cannot be arranged as a subsequence.
+        for e in expected:
+            exp_n = sum(1 for x in expected if x.tool == e.tool)
+            got_n = sum(1 for c in calls if c.tool == e.tool)
+            if got_n < exp_n:
+                return FailureType.MISSING_TOOL
         return FailureType.ORDER_ERROR
-    if not args_ok:
+    if not all(_args_ok(e.args, g.args) for e, g in matched):
         return FailureType.BAD_ARGS
     if len(calls) > len(expected):
         return FailureType.EXTRA_TOOL
@@ -104,16 +121,19 @@ def score_task(task: Task, model: str, traj: Trajectory) -> TaskResult:
     calls = traj.calls
     failure = _classify(expected, calls)
 
-    got_tools = [c.tool for c in calls]
-    hit = sum(1 for e in expected if e.tool in got_tools)
-    tool_selection = hit / len(expected) if expected else 0.0
+    # tool_selection: fraction of expected calls matched at all — derived from
+    # the same greedy matching as the failure label, so duplicate expected
+    # tools are counted per-occurrence, not per-unique-name.
+    matched = _match_subsequence(expected, calls)
+    tool_selection = len(matched) / len(expected) if expected else 1.0
 
+    # arg_accuracy: only over matched pairs. A matched pair scores its args;
+    # an unmatched expected call (MISSING_TOOL) contributes 0 for its args —
+    # correct, since the call never happened and none of its args were right.
     m = t = 0
-    for e in expected:
-        cand = next((c for c in calls if c.tool == e.tool), None)
-        if cand:
-            m += sum(1 for k, v in e.args.items()
-                     if k in cand.args and _arg_matches(v, cand.args[k]))
+    for e, g in matched:
+        m += sum(1 for k, v in e.args.items()
+                 if k in g.args and _arg_matches(v, g.args[k]))
         t += len(e.args)
     arg_accuracy = m / t if t else 1.0
 
