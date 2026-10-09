@@ -20,6 +20,7 @@ class FailureType(str, Enum):
     WRONG_TOOL = "WRONG_TOOL"              # called a tool, but not the expected one
     MISSING_TOOL = "MISSING_TOOL"          # a required call never happened
     BAD_ARGS = "BAD_ARGS"                  # right tool, wrong argument value
+    WRONG_ANSWER = "WRONG_ANSWER"          # no-tool task: abstained but text wrong
     # Reserved: kept for schema stability, but not emitted by the scorer. Extra
     # or unknown args are deliberately ignored (a golden call may list fewer args
     # than the tool needs), so "hallucinated arg" is not a scored failure.
@@ -51,6 +52,9 @@ class Task(BaseModel):
     id: str
     prompt: str
     expected: list[ExpectedCall]
+    # For no-tool tasks (expected == []): accepted final answers, any-of,
+    # matched after normalization. A non-matching answer is WRONG_ANSWER.
+    answer_any_of: list[str] = Field(default_factory=list)
     category: str = "general"
     notes: str = ""
 

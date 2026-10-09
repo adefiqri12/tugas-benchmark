@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "name": "tugas golden (no-tool)",
+    "language": "id",
+    "anchor_date": "2026-10-07",
+    "note": "Generated from no_tool_id.txt by scripts/build_no_tool.py. expected=[] means a correct agent calls no tool; answer_any_of lists the accepted final answers (any-of, normalized)."
+  },
+  "tasks": [
+    {
+      "id": "id-abstain-sapaan",
+      "category": "no-tool/abstain",
+      "prompt": "Halo, apa kabar?",
+      "expected": [],
+      "answer_any_of": [
+        "Baik, terima kasih",
+        "Baik. Ada yang bisa dibantu?"
+      ],
+      "notes": "A greeting needs no tool; calling one is the discipline failure."
+    },
+    {
+      "id": "id-abstain-opini",
+      "category": "no-tool/abstain",
+      "prompt": "Menurutmu, lebih enak kopi atau teh?",
+      "expected": [],
+      "answer_any_of": [
+        "Dua-duanya enak, tergantung selera."
+      ],
+      "notes": "Subjective; no tool can ground the answer."
+    }
+  ]
+}

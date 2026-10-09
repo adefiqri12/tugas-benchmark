@@ -258,3 +258,37 @@ def test_no_tool_task_calling_anyway_is_wrong_tool():
     r = score_task(NO_TOOL, "m", traj)
     assert r.failure == FailureType.WRONG_TOOL
     assert r.exact_match is False
+
+
+NO_TOOL_ANSWER = Task(
+    id="no_tool_answer",
+    prompt="Halo, apa kabar?",
+    expected=[],
+    answer_any_of=["Baik, terima kasih", "Baik. Ada yang bisa dibantu?"],
+)
+
+
+def test_no_tool_answer_match_is_ok():
+    # Accepted answers are any-of, matched after case/space normalization.
+    r = score_task(NO_TOOL_ANSWER, "m", Trajectory(final_text="baik,  terima kasih"))
+    assert r.failure == FailureType.OK
+    assert r.arg_accuracy == 1.0
+    assert r.exact_match is True
+
+
+def test_no_tool_answer_mismatch_is_wrong_answer():
+    # Abstaining is necessary but not sufficient: the text must match.
+    r = score_task(NO_TOOL_ANSWER, "m", Trajectory(final_text="Halo juga"))
+    assert r.failure == FailureType.WRONG_ANSWER
+    assert r.arg_accuracy == 0.0
+    assert r.exact_match is False
+
+
+def test_no_tool_answer_but_called_tool_is_wrong_tool():
+    # Discipline failure dominates the answer check.
+    traj = Trajectory(
+        calls=[ToolCallRecord(tool="hitung", args={"ekspresi": "1+1"})],
+        final_text="Baik, terima kasih",
+    )
+    r = score_task(NO_TOOL_ANSWER, "m", traj)
+    assert r.failure == FailureType.WRONG_TOOL

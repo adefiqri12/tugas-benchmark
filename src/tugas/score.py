@@ -55,6 +55,12 @@ def _args_ok(expected: dict, got: dict) -> bool:
     return all(k in got and _arg_matches(v, got[k]) for k, v in expected.items())
 
 
+def _answer_ok(accepted: list[str], final_text: str) -> bool:
+    """A no-tool task's final text against its accepted answers (any-of)."""
+    got = _norm(final_text)
+    return any(got == _norm(a) for a in accepted)
+
+
 def _match_subsequence(expected: list[ExpectedCall], calls: list[ToolCallRecord]):
     """Greedy left-to-right matching of `expected` as an ordered subsequence
     of `calls` (tool name only; args are checked by the caller).
@@ -127,15 +133,23 @@ def score_task(task: Task, model: str, traj: Trajectory) -> TaskResult:
     matched = _match_subsequence(expected, calls)
     tool_selection = len(matched) / len(expected) if expected else 1.0
 
-    # arg_accuracy: only over matched pairs. A matched pair scores its args;
-    # an unmatched expected call (MISSING_TOOL) contributes 0 for its args —
-    # correct, since the call never happened and none of its args were right.
+    # No-tool task (expected == []): the accepted final answers are the scored
+    # value. Abstaining with a wrong answer is WRONG_ANSWER, not OK.
+    answer_ok = _answer_ok(task.answer_any_of, traj.final_text) if task.answer_any_of else None
+    if failure == FailureType.OK and answer_ok is False:
+        failure = FailureType.WRONG_ANSWER
+
+    # arg_accuracy: over matched pairs for tool tasks; for no-tool tasks it is
+    # the final-answer match (1.0/0.0) when an answer is pinned.
     m = t = 0
     for e, g in matched:
         m += sum(1 for k, v in e.args.items()
                  if k in g.args and _arg_matches(v, g.args[k]))
         t += len(e.args)
-    arg_accuracy = m / t if t else 1.0
+    if expected:
+        arg_accuracy = m / t if t else 1.0
+    else:
+        arg_accuracy = 1.0 if answer_ok is not False else 0.0
 
     return TaskResult(
         task_id=task.id, model=model, failure=failure,

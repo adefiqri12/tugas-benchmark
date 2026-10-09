@@ -1,0 +1,37 @@
+# no_tool_id.txt — raw-text staging for NO-TOOL tasks.
+#
+# Author entries here by hand; convert them to JSON with:
+#     .venv/bin/python scripts/build_no_tool.py
+# which writes eval/datasets/no_tool_id.json (same shape as golden_id.json,
+# plus `answer_any_of`).
+#
+# Format
+# ------
+# Entries are separated by a line containing only three dashes:  ---
+# Within an entry:
+#     id:       slug, unique (required)
+#     category: category string (optional, default "no-tool")
+#     Q:        the prompt, one line (required)
+#     A:        an accepted final answer (required; repeat A: for each accepted
+#               form — any-of, matched after case/space normalization)
+#     N:        notes (optional)
+# Blank lines and lines starting with # are ignored.
+#
+# Rule: the correct behaviour is to answer WITHOUT calling any tool. If the
+# agent calls a tool anyway, the task fails (WRONG_TOOL). The final text must
+# match one of the A: forms.
+
+id: id-abstain-sapaan
+category: no-tool/abstain
+Q: Halo, apa kabar?
+A: Baik, terima kasih
+A: Baik. Ada yang bisa dibantu?
+N: A greeting needs no tool; calling one is the discipline failure.
+
+---
+
+id: id-abstain-opini
+category: no-tool/abstain
+Q: Menurutmu, lebih enak kopi atau teh?
+A: Dua-duanya enak, tergantung selera.
+N: Subjective; no tool can ground the answer.

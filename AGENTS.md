@@ -41,9 +41,12 @@ offline — a gateway-dependent test would hang CI.
 
 - `src/tugas/`: `models.py` (pydantic: Task, ExpectedCall, Trajectory, ...),
   `tools.py` (6 deterministic mock tools), `agent.py` (LLMAgent + ScriptedAgent
-  behind one `Agent` Protocol), `score.py` (scoring + failure taxonomy),
+  behind one `Agent` Protocol), `raw_tasks.py` (no-tool raw-text parser),
+  `score.py` (scoring + failure taxonomy),
   `runner.py`, `cli.py` (typer).
-- `eval/datasets/golden_id.json` — golden tasks; ground truth is hand-written.
+- `eval/datasets/golden_id.json` — golden tasks (tool-call);
+  `eval/datasets/no_tool_id.txt` — raw-text staging for no-tool tasks, converted
+  via `scripts/build_no_tool.py`.
   Canonical on disk; also force-included into the wheel as
   `tugas/data/golden_id.json` so an installed `tugas` finds it from any cwd
   (`cli.default_tasks_path()`).

@@ -25,7 +25,8 @@ trace. The harness scores the trajectory, not just the final text:
 | `steps` | How many tool calls did the agent actually make? |
 
 Every failure is labelled with a cause: `NO_TOOL_CALL`, `WRONG_TOOL`,
-`MISSING_TOOL`, `BAD_ARGS`, `EXTRA_TOOL`, `ORDER_ERROR`, `API_ERROR`.
+`MISSING_TOOL`, `BAD_ARGS`, `WRONG_ANSWER`, `EXTRA_TOOL`, `ORDER_ERROR`,
+`API_ERROR`.
 
 ## Quickstart
 
