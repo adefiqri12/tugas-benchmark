@@ -3,10 +3,11 @@
 TUGAS (Tool-Use and Grounded Agent Score) — eval harness + planned leaderboard
 for tool-calling AI agents in Bahasa Indonesia. Scores an agent's tool-call
 *trajectory* (tool choice, args, order) against hand-written golden traces, not
-just final text. Phase 1 (scaffold) is done; roadmap lives in
-`planning/roadmap.md` (local, gitignored — not shipped in the repo). Task
-backlog: `planning/tasks.md`. Personal notes live in `private/` (gitignored —
-never publish or quote their contents).
+just final text. Phase 2 (broaden coverage) is in progress — golden set is
+9 tasks over 6 tools. Roadmap lives in `planning/roadmap.md` (local,
+gitignored — not shipped in the repo). Task backlog: `planning/tasks.md`;
+session specs: `planning/SPECS.md`. Personal notes live in `private/`
+(gitignored — never publish or quote their contents).
 
 ## Dev environment
 
@@ -31,6 +32,10 @@ uv venv && uv pip install -e ".[dev]"
 - `TUGAS_API_KEY`
 
 Tests are fully offline (ScriptedAgent) and never touch the gateway.
+
+CI (.github/workflows/ci.yml): `uv venv && uv pip install -e ".[dev]"` +
+`uv run pytest -q` on Python 3.11/3.12/3.13. Local tests must stay
+offline — a gateway-dependent test would hang CI.
 
 ## Layout & conventions
 
@@ -71,4 +76,7 @@ Tests are fully offline (ScriptedAgent) and never touch the gateway.
   2026-10-07, which lives in TWO places: `tools.py` `_DEFAULT_TODAY` and
   `golden_id.json` `meta.anchor_date`. Change them together or scoring breaks
   silently.
+- `hitung` rejects `**` on purpose (tools.py): `9**9**9` builds a
+  369-million-digit int and hangs the process. Don't "fix" this to full
+  Python eval.
 - `results/` is gitignored; that's where `--out` run outputs belong.
