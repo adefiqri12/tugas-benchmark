@@ -5,10 +5,9 @@ leaderboard for tool-calling AI agents in Bahasa Indonesia. It scores an agent's
 tool-call *trajectory* (tool choice, arguments, order) against hand-written
 golden traces, not just final text.
 
-Current release: 51 tasks over 13 deterministic offline tools. Roadmap lives in
-`planning/roadmap.md` (local, gitignored, not shipped). Task backlog:
-`planning/tasks.md`; session specs: `planning/SPECS.md`. Personal notes live in
-`private/` (gitignored; never publish or quote their contents).
+Current release: 51 tasks over 13 deterministic offline tools. Roadmap,
+backlog, and session specs are kept outside the repository; personal notes are
+never published or quoted.
 
 ## Dev environment
 
