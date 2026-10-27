@@ -20,7 +20,7 @@ class FailureType(str, Enum):
     WRONG_TOOL = "WRONG_TOOL"              # called a tool, but not the expected one
     MISSING_TOOL = "MISSING_TOOL"          # a required call never happened
     BAD_ARGS = "BAD_ARGS"                  # right tool, wrong argument value
-    WRONG_ANSWER = "WRONG_ANSWER"          # no-tool task: abstained but text wrong
+    WRONG_ANSWER = "WRONG_ANSWER"          # no-tool task: reply was empty
     # Reserved: kept for schema stability, but not emitted by the scorer. Extra
     # or unknown args are deliberately ignored (a golden call may list fewer args
     # than the tool needs), so "hallucinated arg" is not a scored failure.
