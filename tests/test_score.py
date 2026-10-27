@@ -296,3 +296,29 @@ def test_no_tool_answer_but_called_tool_is_wrong_tool():
     )
     r = score_task(NO_TOOL_ANSWER, "m", traj)
     assert r.failure == FailureType.WRONG_TOOL
+
+def test_extra_same_tool_call_before_expected_is_tolerated():
+    # A helper call to the same tool with other args must not steal the slot
+    # of a required call: extras are tolerated regardless of tool name.
+    traj = Trajectory(calls=[
+        ToolCallRecord(tool="hitung", args={"ekspresi": "1+1"}),
+        ToolCallRecord(tool="hitung", args={"ekspresi": "2+2"}),
+        ToolCallRecord(tool="hitung", args={"ekspresi": "3*3"}),
+    ])
+    r = score_task(DUP, "m", traj)
+    assert r.failure == FailureType.EXTRA_TOOL
+    assert r.exact_match is True
+    assert r.arg_accuracy == 1.0
+
+def test_duplicate_expected_tools_reversed_is_order_error():
+    # Both required calls happened with the right args, only the order is
+    # wrong: ORDER_ERROR, not BAD_ARGS, and the args are all correct.
+    traj = Trajectory(calls=[
+        ToolCallRecord(tool="hitung", args={"ekspresi": "3*3"}),
+        ToolCallRecord(tool="hitung", args={"ekspresi": "2+2"}),
+    ])
+    r = score_task(DUP, "m", traj)
+    assert r.failure == FailureType.ORDER_ERROR
+    assert r.tool_selection == 1.0
+    assert r.arg_accuracy == 1.0
+    assert r.exact_match is False

@@ -67,25 +67,65 @@ def _answer_ok(accepted: list[str], final_text: str) -> bool:
     return any(got == _TRAILING_PUNCT.sub("", _norm(a)) for a in accepted)
 
 
-def _match_subsequence(expected: list[ExpectedCall], calls: list[ToolCallRecord]):
+def _match_subsequence(
+    expected: list[ExpectedCall],
+    calls: list[ToolCallRecord],
+    require_args: bool = False,
+):
     """Greedy left-to-right matching of `expected` as an ordered subsequence
-    of `calls` (tool name only; args are checked by the caller).
+    of `calls`.
 
-    Greedy leftmost assignment maximises the number of matched expected calls:
-    each expected call takes the earliest usable slot, never blocking a later
-    match. Returns the matched (expected, actual) pairs — a partial match is
-    fine; the caller decides what an incomplete match means.
+    With `require_args=False` only tool names are compared (used for
+    tool_selection); with `require_args=True` a call must also satisfy the
+    expected args. Greedy leftmost assignment maximises the number of matched
+    expected calls: each expected call takes the earliest usable slot, never
+    blocking a later match. Returns the matched (expected, actual) pairs — a
+    partial match is fine; the caller decides what an incomplete match means.
     """
     j = 0
     matched: list[tuple[ExpectedCall, ToolCallRecord]] = []
     for e in expected:
-        while j < len(calls) and calls[j].tool != e.tool:
+        while j < len(calls) and not (
+            calls[j].tool == e.tool
+            and (not require_args or _args_ok(e.args, calls[j].args))
+        ):
             j += 1
         if j >= len(calls):
             break
         matched.append((e, calls[j]))
         j += 1
     return matched
+
+
+def _unordered_arg_match(
+    expected: list[ExpectedCall], calls: list[ToolCallRecord]
+) -> list[tuple[ExpectedCall, ToolCallRecord]] | None:
+    """Pair every expected call with a distinct actual call, in any order.
+
+    Distinguishes "right calls, wrong order" (ORDER_ERROR) from "wrong args"
+    (BAD_ARGS). Backtracking is needed because taking a call for one expected
+    entry can remove the only candidate for another. Traces are tiny (<= 3
+    expected calls), so the worst case is negligible.
+    """
+    used = [False] * len(calls)
+    pairs: list[tuple[ExpectedCall, ToolCallRecord]] = []
+
+    def assign(i: int) -> bool:
+        if i == len(expected):
+            return True
+        e = expected[i]
+        for j, c in enumerate(calls):
+            if used[j] or c.tool != e.tool or not _args_ok(e.args, c.args):
+                continue
+            used[j] = True
+            pairs.append((e, c))
+            if assign(i + 1):
+                return True
+            pairs.pop()
+            used[j] = False
+        return False
+
+    return list(pairs) if assign(0) else None
 
 
 def _classify(expected: list[ExpectedCall], calls: list[ToolCallRecord]) -> FailureType:
@@ -101,6 +141,12 @@ def _classify(expected: list[ExpectedCall], calls: list[ToolCallRecord]) -> Fail
     got_tools = {c.tool for c in calls}
     if not (exp_tools & got_tools):
         return FailureType.WRONG_TOOL
+    # A complete args-aware embedding wins even when extra calls appeared
+    # first, including extra calls to the same tool with other arguments.
+    # The extra call must not steal the slot of a required one.
+    ordered = _match_subsequence(expected, calls, require_args=True)
+    if len(ordered) == len(expected):
+        return FailureType.EXTRA_TOOL if len(calls) > len(expected) else FailureType.OK
     matched = _match_subsequence(expected, calls)
     if len(matched) < len(expected):
         # Incomplete subsequence. MISSING_TOOL when some expected call never
@@ -115,6 +161,8 @@ def _classify(expected: list[ExpectedCall], calls: list[ToolCallRecord]) -> Fail
                 return FailureType.MISSING_TOOL
         return FailureType.ORDER_ERROR
     if not all(_args_ok(e.args, g.args) for e, g in matched):
+        if _unordered_arg_match(expected, calls) is not None:
+            return FailureType.ORDER_ERROR
         return FailureType.BAD_ARGS
     if len(calls) > len(expected):
         return FailureType.EXTRA_TOOL
@@ -147,8 +195,15 @@ def score_task(task: Task, model: str, traj: Trajectory) -> TaskResult:
 
     # arg_accuracy: over matched pairs for tool tasks; for no-tool tasks it is
     # the final-answer match (1.0/0.0) when an answer is pinned.
+    pairs = matched
+    if expected:
+        ordered = _match_subsequence(expected, calls, require_args=True)
+        if len(ordered) == len(expected):
+            pairs = ordered
+        elif failure == FailureType.ORDER_ERROR:
+            pairs = _unordered_arg_match(expected, calls) or matched
     m = t = 0
-    for e, g in matched:
+    for e, g in pairs:
         m += sum(1 for k, v in e.args.items()
                  if k in g.args and _arg_matches(v, g.args[k]))
         t += len(e.args)
