@@ -47,7 +47,7 @@ TOOL_SPECS: list[ToolSpec] = [
     ),
     ToolSpec(
         name="hitung",
-        description="Hitung ekspresi aritmetika. Pakai untuk operasi angka apa pun.",
+        description="Hitung ekspresi aritmetika dasar: + - * / // dan tanda kurung.",
         parameters={"ekspresi": "string (mis. '1200000 - 150000')"},
         required=["ekspresi"],
     ),

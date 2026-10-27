@@ -155,8 +155,8 @@ def test_arg_matching_tolerates_case_and_whitespace():
 
 
 def test_arg_matching_is_punctuation_sensitive():
-    # Known limit (documented in tasks.md): `_norm` does not touch punctuation,
-    # so "No.12" does not match "No. 12". Pinned so any change is deliberate.
+    # Known limit: `_norm` does not touch punctuation, so "No.12" does not
+    # match "No. 12". Pinned so any change is deliberate.
     task = Task(
         id="alamat",
         prompt="p",

@@ -77,5 +77,7 @@ Entries are separated by a line containing only `---`. Within an entry:
 Tool calls use `tool(kunci="nilai"; kunci2="nilai2")`, or `tool()` for no
 arguments. Values are double-quoted strings; a value may also be a list of
 strings for any-of argument matching. An entry may not contain both `T` and `A`.
+Blank lines and lines starting with `#` are ignored. A repeated key inside one
+entry and a repeated `id` across the file are both hard errors.
 
 All dates assume the anchor date `2026-10-07` from `src/tugas/anchor.py`.

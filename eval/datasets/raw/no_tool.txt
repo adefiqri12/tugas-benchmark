@@ -1,7 +1,9 @@
 # no_tool.txt — tasks whose correct behaviour is to answer with NO tool call.
 #
-# A: lines list accepted final answers (any-of, matched after case/space
-# normalization). If the agent calls any tool, the task fails (WRONG_TOOL).
+# A: lines are reference answers for the offline baseline and for humans.
+# They are NOT compared with the model's reply: a no-tool task passes when the
+# agent calls no tool and returns a non-empty answer. If it calls any tool, the
+# task fails (WRONG_TOOL).
 
 id: id-abstain-sapaan
 category: no-tool/abstain
