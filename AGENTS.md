@@ -91,7 +91,7 @@ every fully specified expected call executes.
 - Scoring matches the expected trace as an *ordered subsequence* of the actual
   calls: extra helper calls are `EXTRA_TOOL` (tolerated), not failures. Do not
   tighten this to exact-list matching.
-- Argument matching normalizes thousands separators and operator spacing
+- Argument matching normalizes case, thousands separators, and operator spacing
   (`"1.200.000 - 150.000"` equals `"1200000-150000"`). Only arguments listed in
   the golden trace are scored; extra arguments are ignored. A golden call may
   list fewer arguments than the tool needs to execute, so a golden trace is a

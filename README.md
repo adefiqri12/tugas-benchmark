@@ -115,9 +115,9 @@ builder, and run the tests.
   Extra helper calls are tolerated and reported as `EXTRA_TOOL`.
 - Only arguments listed in the golden trace are scored. Extra arguments the
   agent supplies are ignored.
-- Argument matching normalizes thousands separators and operator spacing, so
-  `"1.200.000 - 150.000"` matches `"1200000-150000"`. A golden value may be a
-  list of accepted forms (any-of).
+- Argument matching normalizes case, thousands separators, and operator
+  spacing, so `"1.200.000 - 150.000"` matches `"1200000-150000"`. A golden
+  value may be a list of accepted forms (any-of).
 - A no-tool task passes when the agent calls nothing and returns a non-empty
   reply. Prose is not scored: the benchmark measures tool use, so the `A:`
   lines are reference answers for the offline baseline. Calling any tool is
