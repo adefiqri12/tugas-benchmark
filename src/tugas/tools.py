@@ -738,7 +738,7 @@ def execute(name: str, args: dict) -> dict:
 
 
 def openai_schema() -> list[dict]:
-    """Tool specs in [OI]-compatible function-calling JSON."""
+    """Tool specs in OpenAI-compatible function-calling JSON."""
     out = []
     for s in TOOL_SPECS:
         props = {k: {"type": "string"} for k in s.parameters}
