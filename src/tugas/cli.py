@@ -94,8 +94,9 @@ def run(
     models: str = typer.Option(..., "--model", "-m", help="comma-separated model ids"),
     path: str | None = typer.Argument(None, help="path to golden tasks JSON"),
     out: str | None = typer.Option(None, "--out", help="write results JSON here"),
-    timeout: float = typer.Option(
-        60.0, "--timeout", min=1.0, help="per-request gateway timeout in seconds",
+    timeout: int = typer.Option(
+        60, "--timeout", min=1, max=3600,
+        help="per-request gateway timeout in whole seconds (1-3600)",
     ),
 ) -> None:
     """Run one or more models over the golden tasks and print a score table."""
@@ -106,7 +107,7 @@ def run(
         raise typer.Exit(code=2)
     all_results = []
     for mid in model_ids:
-        agent = LLMAgent(model=mid, timeout=timeout)
+        agent = LLMAgent(model=mid, timeout=float(timeout))
         results = run_agent(agent, tasks)
         all_results.extend(results)
         s = summarize(results)

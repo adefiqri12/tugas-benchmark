@@ -189,3 +189,14 @@ def test_cli_passes_timeout_to_agent(monkeypatch, tmp_path):
 
     assert result.exit_code == 0, result.output
     assert seen == {"model": "fake", "timeout": 5.0}
+
+
+@pytest.mark.parametrize("value", ["0", "1.5", "inf", "nan"])
+def test_cli_rejects_invalid_timeout(value, tmp_path) -> None:
+    from tugas import cli
+
+    result = CliRunner().invoke(
+        app, ["run", "-m", "fake", "--timeout", value, str(default_tasks_path())]
+    )
+    assert result.exit_code == 2, result.output
+    assert "Invalid value for '--timeout'" in result.output
