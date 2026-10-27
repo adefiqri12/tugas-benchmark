@@ -97,8 +97,12 @@ def run(
 ) -> None:
     """Run one or more models over the golden tasks and print a score table."""
     tasks = _load_or_exit(path)
+    model_ids = [m.strip() for m in models.split(",") if m.strip()]
+    if not model_ids:
+        console.print("[red]--model needs at least one model id[/]")
+        raise typer.Exit(code=2)
     all_results = []
-    for mid in [m.strip() for m in models.split(",") if m.strip()]:
+    for mid in model_ids:
         agent = LLMAgent(model=mid)
         results = run_agent(agent, tasks)
         all_results.extend(results)
@@ -122,12 +126,16 @@ def run(
     console.print(t)
 
     if out:
-        outp = Path(out)
-        outp.parent.mkdir(parents=True, exist_ok=True)
-        outp.write_text(
-            json.dumps([r.model_dump() for r in all_results], indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        try:
+            outp = Path(out)
+            outp.parent.mkdir(parents=True, exist_ok=True)
+            outp.write_text(
+                json.dumps([r.model_dump() for r in all_results], indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            console.print(f"[red]gagal menulis {out}: {exc}[/]")
+            raise typer.Exit(code=1) from exc
         console.print(f"[green]wrote {out}[/]")
 
 

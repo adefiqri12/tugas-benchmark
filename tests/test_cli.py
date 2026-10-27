@@ -132,3 +132,39 @@ def test_cli_exits_nonzero_when_every_task_is_api_error(monkeypatch, tmp_path) -
     assert result.exit_code == 2, result.output
     assert "every task failed with API_ERROR" in result.output
     assert len(json.loads(out.read_text(encoding="utf-8"))) == len(load_tasks(default_tasks_path()))
+
+
+def test_cli_rejects_empty_model_list(monkeypatch) -> None:
+    # An empty -m must not look like a successful run.
+    from tugas import cli
+
+    monkeypatch.setattr(
+        cli, "LLMAgent", lambda model: pytest.fail("agent must not be constructed")
+    )
+    result = CliRunner().invoke(app, ["run", "-m", " , "])
+    assert result.exit_code == 2, result.output
+    assert "--model needs at least one model id" in result.output
+
+
+def test_cli_reports_unwritable_out(monkeypatch, tmp_path) -> None:
+    from tugas import cli
+    from tugas.models import TaskResult
+
+    def fake_run(agent, tasks):
+        return [
+            TaskResult(
+                task_id=t.id, model="fake", failure=FailureType.OK,
+                tool_selection=1.0, arg_accuracy=1.0, exact_match=True, steps=1,
+            )
+            for t in tasks
+        ]
+
+    monkeypatch.setattr(cli, "LLMAgent", lambda model: ScriptedAgent(model, {}))
+    monkeypatch.setattr(cli, "run_agent", fake_run)
+    out_dir = tmp_path / "outdir"
+    out_dir.mkdir()
+    result = CliRunner().invoke(
+        app, ["run", "-m", "fake", str(default_tasks_path()), "--out", str(out_dir)]
+    )
+    assert result.exit_code == 1, result.output
+    assert "gagal menulis" in result.output

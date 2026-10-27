@@ -21,7 +21,7 @@ The tasks target conventions that transfer poorly from English:
 
 ## Status
 
-- Harness and dataset: **v0.1.5**, usable now.
+- Harness and dataset: **v0.1.6**, usable now.
 - Leaderboard: **not live yet**. Scores are reproducible locally from the
   commands below; a public leaderboard is the next milestone.
 - 51 hand-written tasks over 13 deterministic mock tools.
