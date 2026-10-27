@@ -99,3 +99,36 @@ def test_cli_run_writes_results(monkeypatch, tmp_path) -> None:
     rows = json.loads(out.read_text(encoding="utf-8"))
     assert len(rows) == len(tasks)
     assert {row["failure"] for row in rows} == {"OK"}
+
+
+def test_cli_reports_version() -> None:
+    from tugas import __version__, cli
+
+    result = CliRunner().invoke(app, ["--version"])
+    assert result.exit_code == 0, result.output
+    assert __version__ in result.output
+
+
+def test_cli_exits_nonzero_when_every_task_is_api_error(monkeypatch, tmp_path) -> None:
+    # A gateway that is down must not look like a successful zero score.
+    from tugas import cli
+    from tugas.models import TaskResult
+
+    def fake_run(agent, tasks):
+        return [
+            TaskResult(
+                task_id=t.id, model="fake", failure=FailureType.API_ERROR,
+                tool_selection=0.0, arg_accuracy=0.0, exact_match=False, steps=0,
+            )
+            for t in tasks
+        ]
+
+    monkeypatch.setattr(cli, "LLMAgent", lambda model: ScriptedAgent(model, {}))
+    monkeypatch.setattr(cli, "run_agent", fake_run)
+    out = tmp_path / "api_error.json"
+    result = CliRunner().invoke(
+        app, ["run", "-m", "fake", str(default_tasks_path()), "--out", str(out)]
+    )
+    assert result.exit_code == 2, result.output
+    assert "every task failed with API_ERROR" in result.output
+    assert len(json.loads(out.read_text(encoding="utf-8"))) == len(load_tasks(default_tasks_path()))

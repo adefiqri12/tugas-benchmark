@@ -9,7 +9,9 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from . import __version__
 from .agent import LLMAgent
+from .models import FailureType
 from .runner import load_tasks, run_agent
 from .score import summarize
 
@@ -17,6 +19,22 @@ app = typer.Typer(add_completion=False, help="Eval harness for Indonesian tool-c
 console = Console()
 
 DEFAULT_TASKS = "eval/datasets/golden_id.json"
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        console.print(__version__)
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        False, "--version", callback=_version_callback, is_eager=True,
+        help="Show the TUGAS version and exit.",
+    ),
+) -> None:
+    """Eval harness for Indonesian tool-calling agents."""
 
 
 def default_tasks_path() -> str:
@@ -111,6 +129,15 @@ def run(
             encoding="utf-8",
         )
         console.print(f"[green]wrote {out}[/]")
+
+
+    failures = {r.failure for r in all_results}
+    if all_results and failures == {FailureType.API_ERROR}:
+        console.print(
+            "[red]every task failed with API_ERROR[/] — check TUGAS_BASE_URL and "
+            "TUGAS_API_KEY, then rerun.",
+        )
+        raise typer.Exit(code=2)
 
 
 if __name__ == "__main__":

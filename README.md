@@ -21,7 +21,7 @@ The tasks target conventions that transfer poorly from English:
 
 ## Status
 
-- Harness and dataset: **v0.1.3**, usable now.
+- Harness and dataset: **v0.1.4**, usable now.
 - Leaderboard: **not live yet**. Scores are reproducible locally from the
   commands below; a public leaderboard is the next milestone.
 - 51 hand-written tasks over 13 deterministic mock tools.
@@ -53,6 +53,20 @@ uv venv && uv pip install -e ".[dev]"
 .venv/bin/python -m pytest -q               # offline tests
 ```
 
+To use TUGAS without cloning, install the wheel from a release (PyPI is not
+used: the `tugas` name there belongs to an unrelated project):
+
+```bash
+# download the .whl from the latest release, then:
+python -m pip install tugas-*.whl
+tugas --version
+tugas list
+```
+
+The wheel ships the dataset, so the CLI works from any directory. The test
+suite and the dataset builder live in the source checkout and are not part of
+the wheel.
+
 Score a model against a running OpenAI-compatible gateway with tool calling:
 
 ```bash
@@ -62,6 +76,10 @@ export TUGAS_API_KEY=...
 .venv/bin/tugas run -m "auto/best-fast"
 .venv/bin/tugas run -m model-a,model-b --out results/run.json
 ```
+
+If every task fails with `API_ERROR`, `tugas run` exits with status 2 after
+writing any `--out` file, so a misconfigured gateway cannot look like a
+successful zero score.
 
 Defaults: `TUGAS_BASE_URL=http://127.0.0.1:20129/v1`, `TUGAS_API_KEY=""`.
 Environment variable names are case-sensitive.
