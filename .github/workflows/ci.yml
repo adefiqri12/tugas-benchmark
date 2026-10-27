@@ -19,5 +19,15 @@ jobs:
         run: |
           uv venv --python ${{ matrix.python-version }}
           uv pip install -e ".[dev]"
+      - name: Check generated dataset is in sync with raw sources
+        run: uv run python scripts/build_dataset.py --check
       - name: Run offline tests
         run: uv run pytest -q
+      - name: Build wheel
+        run: uv build
+      - name: Smoke-test the wheel from another directory
+        run: |
+          uv venv .wheel-venv
+          uv pip install --python .wheel-venv/bin/python dist/*.whl
+          cd /tmp
+          "$GITHUB_WORKSPACE/.wheel-venv/bin/tugas" list

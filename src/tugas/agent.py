@@ -20,9 +20,11 @@ from .models import Task, ToolCallRecord, Trajectory
 from .tools import ToolError, execute, openai_schema
 
 SYSTEM = (
-    "Kamu adalah agent yang harus memanggil tool untuk menjawab. "
-    "Jawab dalam Bahasa Indonesia. Jangan mengarang data — panggil tool yang sesuai. "
-    "Jika perlu tanggal absolut, panggil parse_tanggal lebih dulu."
+    "Kamu adalah agent yang menjawab dalam Bahasa Indonesia. "
+    "Panggil tool hanya jika jawaban butuh data yang bisa dicek tool; "
+    "jika tidak perlu tool, jawab langsung. Jangan mengarang data — "
+    "gunakan tool yang sesuai. Jika perlu tanggal absolut, panggil "
+    "parse_tanggal lebih dulu."
 )
 
 
@@ -116,7 +118,13 @@ class ScriptedAgent:
 
     def run(self, task: Task) -> Trajectory:
         calls = self.plan.get(task.id, [])
-        return Trajectory(calls=[_replay(c) for c in calls], final_text="(scripted)")
+        # A no-tool task is scored on its final text, so replay an accepted
+        # answer instead of the placeholder used for tool tasks.
+        if task.answer_any_of and not task.expected:
+            final_text = task.answer_any_of[0]
+        else:
+            final_text = "(scripted)"
+        return Trajectory(calls=[_replay(c) for c in calls], final_text=final_text)
 
 
 def _replay(call: ToolCallRecord) -> ToolCallRecord:

@@ -43,10 +43,19 @@ def default_tasks_path() -> str:
     return DEFAULT_TASKS
 
 
+def _load_or_exit(path: str | None):
+    """Load tasks, turning a bad/missing dataset into a clean CLI error."""
+    try:
+        return load_tasks(path or default_tasks_path())
+    except ValueError as exc:
+        console.print(f"[red]{exc}[/]")
+        raise typer.Exit(code=1) from exc
+
+
 @app.command("list")
 def list_tasks(path: str | None = typer.Argument(None, help="path to golden tasks JSON")) -> None:
     """Show the golden tasks."""
-    tasks = load_tasks(path or default_tasks_path())
+    tasks = _load_or_exit(path)
     t = Table(title=f"tasks ({len(tasks)})")
     t.add_column("id")
     t.add_column("category")
@@ -69,7 +78,7 @@ def run(
     out: str | None = typer.Option(None, "--out", help="write results JSON here"),
 ) -> None:
     """Run one or more models over the golden tasks and print a score table."""
-    tasks = load_tasks(path or default_tasks_path())
+    tasks = _load_or_exit(path)
     all_results = []
     for mid in [m.strip() for m in models.split(",") if m.strip()]:
         agent = LLMAgent(model=mid)

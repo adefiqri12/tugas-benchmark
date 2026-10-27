@@ -29,6 +29,7 @@ from .models import (
 _SEP = re.compile(r"(?<=\d)[.,](?=\d{3}(?:\D|$))")  # 1.200.000 -> 1200000
 _OPS = re.compile(r"\s*([+\-*/])\s*")                # "a - b" -> "a-b"
 _WS = re.compile(r"\s+")
+_TRAILING_PUNCT = re.compile(r"[\s.!?,]+$")
 
 
 def _norm(v: object) -> str:
@@ -56,9 +57,14 @@ def _args_ok(expected: dict, got: dict) -> bool:
 
 
 def _answer_ok(accepted: list[str], final_text: str) -> bool:
-    """A no-tool task's final text against its accepted answers (any-of)."""
-    got = _norm(final_text)
-    return any(got == _norm(a) for a in accepted)
+    """A no-tool task's final text against its accepted answers (any-of).
+
+    Trailing punctuation is ignored, so "Baik, terima kasih!" still matches
+    the hand-written form "Baik, terima kasih". Word choice stays strict: a
+    different answer is WRONG_ANSWER.
+    """
+    got = _TRAILING_PUNCT.sub("", _norm(final_text))
+    return any(got == _TRAILING_PUNCT.sub("", _norm(a)) for a in accepted)
 
 
 def _match_subsequence(expected: list[ExpectedCall], calls: list[ToolCallRecord]):

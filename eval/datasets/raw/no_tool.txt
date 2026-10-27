@@ -1,0 +1,19 @@
+# no_tool.txt — tasks whose correct behaviour is to answer with NO tool call.
+#
+# A: lines list accepted final answers (any-of, matched after case/space
+# normalization). If the agent calls any tool, the task fails (WRONG_TOOL).
+
+id: id-abstain-sapaan
+category: no-tool/abstain
+Q: Halo, apa kabar?
+A: Baik, terima kasih
+A: Baik. Ada yang bisa dibantu?
+N: A greeting needs no tool; calling one is the discipline failure.
+
+---
+
+id: id-abstain-opini
+category: no-tool/abstain
+Q: Menurutmu, lebih enak kopi atau teh?
+A: Dua-duanya enak, tergantung selera.
+N: Subjective; no tool can ground the answer.

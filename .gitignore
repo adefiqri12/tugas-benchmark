@@ -1,8 +1,11 @@
 .venv/
+.wheel-venv/
 __pycache__/
 *.pyc
 .pytest_cache/
 results/
+dist/
+build/
 *.egg-info/
 .zed/
 planning/

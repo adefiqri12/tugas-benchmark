@@ -90,8 +90,8 @@ def test_llm_agent_executes_multi_step_loop(monkeypatch):
     # tool results were executed and fed back into the conversation
     assert json.loads(seen["tool_msgs"][0])["tanggal"] == "2026-10-09"
     assert json.loads(seen["tool_msgs"][1])["sapaan"] == "Selamat malam"
-    # all 6 tools advertised on the first request
-    assert len(seen["payloads"][0]["tools"]) == 6
+    # every registered tool is advertised on the first request
+    assert len(seen["payloads"][0]["tools"]) == len(agent.openai_schema())
 
     result = score_task(task, "mock-model", traj)
     assert result.failure == FailureType.OK

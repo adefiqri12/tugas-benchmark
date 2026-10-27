@@ -5,9 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from typer.testing import CliRunner
 
 from tugas.agent import ScriptedAgent
-from tugas.cli import default_tasks_path
+from tugas.cli import app, default_tasks_path
 from tugas.models import FailureType, ToolCallRecord
 from tugas.runner import load_tasks, run_agent
 
@@ -21,13 +22,17 @@ def test_default_tasks_path_resolves_to_existing_file() -> None:
 def test_default_tasks_path_loads_golden_tasks() -> None:
     tasks = load_tasks(default_tasks_path())
     assert tasks, "golden dataset should not be empty"
-    assert all(t.expected for t in tasks), "every task needs an expected call"
+    # A task is either a tool-call task or a no-tool abstain task.
+    assert all(bool(t.expected) != bool(t.answer_any_of) for t in tasks), (
+        "each task must define exactly one of expected calls / accepted answers"
+    )
 
 
-def test_golden_dataset_has_nine_tasks() -> None:
+def test_golden_dataset_is_broad() -> None:
     tasks = load_tasks(default_tasks_path())
-    assert len(tasks) == 9, f"expected 9 golden tasks, got {len(tasks)}"
-    assert all(t.expected for t in tasks), "every task needs a non-empty expected trace"
+    assert len(tasks) >= 50, f"expected at least 50 golden tasks, got {len(tasks)}"
+    tool_tasks = [t for t in tasks if t.expected]
+    assert len(tool_tasks) >= 45, f"expected at least 45 tool tasks, got {len(tool_tasks)}"
 
 
 def test_load_tasks_reports_malformed_dataset(tmp_path) -> None:
@@ -37,6 +42,11 @@ def test_load_tasks_reports_malformed_dataset(tmp_path) -> None:
     bad.write_text('{"meta": {}}', encoding="utf-8")
     with pytest.raises(ValueError, match="gagal memuat golden tasks"):
         load_tasks(bad)
+
+def test_cli_reports_missing_dataset_without_traceback(tmp_path) -> None:
+    result = CliRunner().invoke(app, ["list", str(tmp_path / "missing.json")])
+    assert result.exit_code == 1
+    assert "gagal memuat golden tasks" in result.output
 
 
 def test_golden_dataset_includes_new_task_ids() -> None:
@@ -66,4 +76,3 @@ def test_every_golden_task_replays_to_ok() -> None:
     assert len(results) == len(tasks)
     for result in results:
         assert result.failure == FailureType.OK, f"{result.task_id}: {result.failure}"
-

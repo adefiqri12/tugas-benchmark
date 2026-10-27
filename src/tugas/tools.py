@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime as _dt
 import re as _re
 
+from .anchor import ANCHOR
 from .models import ToolSpec
 
 # -- specs sent to the model ------------------------------------------------
@@ -68,6 +69,97 @@ TOOL_SPECS: list[ToolSpec] = [
         parameters={"teks": "string (alamat lengkap)"},
         required=["teks"],
     ),
+    ToolSpec(
+        name="cek_stok",
+        description=(
+            "Cek ketersediaan stok barang, termasuk varian warna/ukuran dan jumlah "
+            "pembelian grosir. Gunakan sebelum menjanjikan barang masih ready."
+        ),
+        parameters={
+            "barang": "string (nama barang)",
+            "ukuran": "string (opsional)",
+            "warna": "string (opsional)",
+            "jumlah": "string (opsional, jumlah yang diminta)",
+        },
+        required=["barang"],
+    ),
+    ToolSpec(
+        name="jam_buka_toko",
+        description=(
+            "Cek jam buka dan tutup toko untuk hari/tanggal tertentu dan cabang "
+            "tertentu. Tanpa argumen: jadwal cabang pusat hari ini."
+        ),
+        parameters={
+            "hari": "string (opsional: nama hari, 'hari ini', 'besok', atau YYYY-MM-DD)",
+            "cabang": "string (opsional: pusat, samarinda)",
+        },
+        required=[],
+    ),
+    ToolSpec(
+        name="cek_diskon",
+        description=(
+            "Cek promo/diskon aktif untuk sebuah produk atau kode voucher. Tanpa "
+            "argumen: tampilkan semua promo yang sedang aktif."
+        ),
+        parameters={
+            "produk": "string (opsional, nama produk)",
+            "kode": "string (opsional, kode voucher)",
+        },
+        required=[],
+    ),
+    ToolSpec(
+        name="cek_booking",
+        description=(
+            "Cek ketersediaan booking tempat (meja, room karaoke, studio foto, "
+            "lapangan futsal, reservasi acara) pada tanggal dan jam tertentu."
+        ),
+        parameters={
+            "tempat": "string",
+            "tanggal": "string (YYYY-MM-DD)",
+            "jam": "string (opsional, HH:MM)",
+            "jumlah_orang": "string (opsional)",
+        },
+        required=["tempat", "tanggal"],
+    ),
+    ToolSpec(
+        name="laporan_penjualan",
+        description=(
+            "Laporan penjualan untuk satu periode: jumlah transaksi dan total rupiah. "
+            "metrik='produk terlaris' mengembalikan produk paling laku pada periode itu."
+        ),
+        parameters={
+            "periode": (
+                "string: 'hari ini'|'kemarin'|'minggu ini'|'bulan ini'|"
+                "'bulan lalu'|'tahun ini'|YYYY-MM-DD"
+            ),
+            "metrik": "string (opsional: 'produk terlaris')",
+        },
+        required=["periode"],
+    ),
+    ToolSpec(
+        name="laporan_pendapatan",
+        description="Laporan pendapatan (omzet) untuk satu periode, seluruh cabang atau satu cabang.",
+        parameters={
+            "periode": (
+                "string: 'hari ini'|'kemarin'|'minggu ini'|'bulan ini'|"
+                "'bulan lalu'|'tahun ini'|YYYY-MM-DD"
+            ),
+            "cabang": "string (opsional: pusat, samarinda)",
+        },
+        required=["periode"],
+    ),
+    ToolSpec(
+        name="laporan_leads",
+        description="Laporan jumlah leads untuk satu periode, seluruh sumber atau satu sumber.",
+        parameters={
+            "periode": (
+                "string: 'hari ini'|'kemarin'|'minggu ini'|'bulan ini'|"
+                "'bulan lalu'|'tahun ini'|YYYY-MM-DD"
+            ),
+            "sumber": "string (opsional: instagram, whatsapp, tiktok, google)",
+        },
+        required=["periode"],
+    ),
 ]
 
 
@@ -82,7 +174,7 @@ _BULAN = {
     "desember": 12,
 }
 
-_DEFAULT_TODAY = _dt.date(2026, 10, 7)  # fixed anchor -> reproducible evals
+_DEFAULT_TODAY = ANCHOR  # fixed date -> reproducible evals
 
 # Indonesian DD/MM numeric dates. Loose match detects "looks numeric"; strict
 # fullmatch requires a 4-digit year (two-digit years are rejected on purpose).
@@ -238,6 +330,374 @@ def parse_alamat(teks: str) -> dict:
     raise ToolError(f"kota tidak ditemukan pada alamat: {teks!r}")
 
 
+# -- commerce tools ---------------------------------------------------------
+
+def _teks(value: object) -> str:
+    return str(value).strip().lower()
+
+def _bulat(value: object, nama: str) -> int:
+    try:
+        n = int(str(value).strip())
+    except (TypeError, ValueError) as exc:
+        raise ToolError(f"{nama} harus bilangan bulat: {value!r}") from exc
+    if n < 1:
+        raise ToolError(f"{nama} harus lebih dari 0: {n}")
+    return n
+
+def _pilih_kunci(query: object, table: dict, label: str) -> str:
+    """Resolve a free-text name to one key of ``table`` (exact, then substring)."""
+    q = _teks(query)
+    if q in table:
+        return q
+    matches = [k for k in table if k in q or q in k]
+    if not matches:
+        raise ToolError(f"{label} tidak dikenal: {query!r}")
+    return max(matches, key=len)  # most specific match
+
+_STOK: dict[str, dict] = {
+    "kaos polos": {
+        "stok": 120,
+        "ukuran": {"s": 20, "m": 40, "l": 35, "xl": 25},
+        "warna": {"hitam": 60, "putih": 40, "navy": 20},
+        "varian": {"hitam|l": 24, "hitam|m": 18, "putih|l": 12, "navy|l": 6},
+    },
+    "sepatu sneakers": {
+        "stok": 30,
+        "ukuran": {"40": 6, "41": 8, "42": 11, "43": 7, "44": 4},
+        "warna": {"hitam": 18, "putih": 12},
+        "varian": {"hitam|42": 7, "putih|42": 4},
+    },
+    "tas ransel": {
+        "stok": 22,
+        "warna": {"hitam": 10, "navy": 7, "abu": 5},
+    },
+    "gelas plastik": {"stok": 480, "satuan": "pcs"},
+    "hijab babydoll": {
+        "stok": 0,
+        "warna": {"abu": 0, "hitam": 0},
+        "restock": "minggu depan",
+    },
+}
+
+def cek_stok(
+    barang: str,
+    ukuran: str | None = None,
+    warna: str | None = None,
+    jumlah: str | None = None,
+) -> dict:
+    key = _pilih_kunci(barang, _STOK, "barang")
+    item = _STOK[key]
+    minta = _bulat(jumlah, "jumlah") if jumlah not in (None, "") else 1
+    uk = _teks(ukuran) if ukuran not in (None, "") else None
+    wr = _teks(warna) if warna not in (None, "") else None
+
+    if uk and wr:
+        stok = item.get("varian", {}).get(f"{wr}|{uk}", 0)
+    elif wr:
+        stok = item.get("warna", {}).get(wr, 0)
+    elif uk:
+        stok = item.get("ukuran", {}).get(uk, 0)
+    else:
+        stok = item["stok"]
+
+    hasil = {
+        "barang": key,
+        "ukuran": uk,
+        "warna": wr,
+        "jumlah": minta,
+        "stok": stok,
+        "tersedia": stok >= minta,
+    }
+    if item.get("restock"):
+        hasil["restock"] = item["restock"]
+    return hasil
+
+_HARI_NAMA = ("senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu")
+
+_JADWAL: dict[str, dict[str, tuple[str, str]]] = {
+    "pusat": {
+        "senin": ("09:00", "21:00"),
+        "selasa": ("09:00", "21:00"),
+        "rabu": ("09:00", "21:00"),
+        "kamis": ("09:00", "21:00"),
+        "jumat": ("09:00", "21:00"),
+        "sabtu": ("09:00", "21:00"),
+        "minggu": ("10:00", "20:00"),
+    },
+    "samarinda": {
+        "senin": ("09:00", "21:30"),
+        "selasa": ("09:00", "21:30"),
+        "rabu": ("09:00", "21:30"),
+        "kamis": ("09:00", "21:30"),
+        "jumat": ("09:00", "21:30"),
+        "sabtu": ("09:00", "21:30"),
+        "minggu": ("10:00", "20:00"),
+    },
+}
+
+# Fixed closures, aligned with the dataset anchor year.
+_LIBUR = {
+    "2026-12-25": "libur Natal",
+    "2026-12-31": "tutup awal tahun",
+    "2026-01-01": "libur Tahun Baru",
+}
+
+def jam_buka_toko(hari: str | None = None, cabang: str | None = None) -> dict:
+    cab = _pilih_kunci(cabang or "pusat", _JADWAL, "cabang")
+    h = _teks(hari) if hari not in (None, "") else "hari ini"
+
+    if h in ("hari ini", "besok", "kemarin"):
+        tanggal = _dt.date.fromisoformat(parse_tanggal(h)["tanggal"])
+        nama_hari = _HARI_NAMA[tanggal.weekday()]
+    elif h in _HARI_NAMA:
+        nama_hari = h
+        delta = (_HARI_NAMA.index(h) - _DEFAULT_TODAY.weekday()) % 7
+        tanggal = _DEFAULT_TODAY + _dt.timedelta(days=delta)
+    else:
+        try:
+            tanggal = _dt.date.fromisoformat(str(hari).strip())
+        except ValueError as exc:
+            raise ToolError(f"hari tidak dikenal: {hari!r}") from exc
+        nama_hari = _HARI_NAMA[tanggal.weekday()]
+
+    hasil = {"cabang": cab, "hari": nama_hari, "tanggal": tanggal.isoformat()}
+    if tanggal.isoformat() in _LIBUR:
+        hasil.update({"libur": True, "buka": None, "tutup": None,
+                      "catatan": _LIBUR[tanggal.isoformat()]})
+        return hasil
+
+    buka, tutup = _JADWAL[cab][nama_hari]
+    hasil.update({"libur": False, "buka": buka, "tutup": tutup, "catatan": ""})
+    return hasil
+
+_PROMO = [
+    {"produk": "kaos", "diskon_persen": 20, "jenis": "diskon",
+     "label": "Semua kaos", "berakhir": "2026-10-31"},
+    {"produk": "kemeja flanel", "diskon_persen": 15, "jenis": "diskon",
+     "label": "Kemeja flanel", "berakhir": "2026-10-20"},
+    {"produk": "paket skincare", "diskon_persen": 30, "jenis": "bundling",
+     "label": "Paket skincare bundling", "berakhir": "2026-10-31"},
+    {"kode": "HEMAT50", "potongan": 50000, "jenis": "voucher",
+     "label": "Voucher HEMAT50", "berakhir": "2026-10-31"},
+]
+
+def cek_diskon(produk: str | None = None, kode: str | None = None) -> dict:
+    q_produk = _teks(produk) if produk not in (None, "") else None
+    q_kode = _teks(kode) if kode not in (None, "") else None
+    hasil = []
+    for promo in _PROMO:
+        p = promo.get("produk", "")
+        if q_produk:
+            if not p or not (p == q_produk or p in q_produk or q_produk in p):
+                continue
+        if q_kode and promo.get("kode", "").lower() != q_kode:
+            continue
+        hasil.append(dict(promo))
+    return {
+        "produk": q_produk,
+        "kode": q_kode,
+        "promo": hasil,
+        "ditemukan": bool(hasil),
+    }
+
+_TEMPAT = {
+    "meja": {"kapasitas": 8},
+    "room karaoke": {"kapasitas": 12},
+    "studio foto": {"kapasitas": 10},
+    "lapangan futsal": {"kapasitas": 14},
+    "reservasi acara": {"kapasitas": 50},
+}
+
+# Slots that are already taken, so availability is not a constant "yes".
+_BOOKED = {
+    ("meja", "2026-10-10", "19:00"),
+    ("room karaoke", "2026-10-11", "20:00"),
+    ("studio foto", "2026-10-12", "13:00"),
+    ("lapangan futsal", "2026-10-07", "20:00"),
+    ("reservasi acara", "2026-10-17", "10:00"),
+}
+
+def _jam(value: object) -> str:
+    t = _teks(value).replace(".", ":")
+    m = _re.fullmatch(r"(\d{1,2})(?::(\d{2}))?\s*(pagi|siang|sore|malam)?", t)
+    if m is None:
+        raise ToolError(f"jam tidak dikenal: {value!r}")
+    jam, menit, bagian = int(m.group(1)), int(m.group(2) or 0), m.group(3)
+    if bagian in ("sore", "malam") and jam < 12:
+        jam += 12
+    if bagian in ("pagi", "siang") and jam == 12:
+        jam = 0
+    if not (0 <= jam <= 23 and 0 <= menit <= 59):
+        raise ToolError(f"jam tidak valid: {value!r}")
+    return f"{jam:02d}:{menit:02d}"
+
+def cek_booking(
+    tempat: str,
+    tanggal: str,
+    jam: str | None = None,
+    jumlah_orang: str | None = None,
+) -> dict:
+    key = _pilih_kunci(tempat, _TEMPAT, "tempat")
+    try:
+        d = _dt.date.fromisoformat(str(tanggal).strip())
+    except ValueError as exc:
+        raise ToolError(f"tanggal tidak valid: {tanggal!r}") from exc
+    j = _jam(jam) if jam not in (None, "") else None
+    orang = _bulat(jumlah_orang, "jumlah_orang") if jumlah_orang not in (None, "") else 1
+
+    kapasitas = _TEMPAT[key]["kapasitas"]
+    catatan = ""
+    tersedia = True
+    if d < _DEFAULT_TODAY:
+        tersedia, catatan = False, "tanggal sudah lewat"
+    elif j and (key, d.isoformat(), j) in _BOOKED:
+        tersedia, catatan = False, "slot sudah dibooking"
+    elif orang > kapasitas:
+        tersedia, catatan = False, f"melebihi kapasitas {kapasitas} orang"
+
+    return {
+        "tempat": key,
+        "tanggal": d.isoformat(),
+        "jam": j,
+        "jumlah_orang": orang,
+        "kapasitas": kapasitas,
+        "tersedia": tersedia,
+        "catatan": catatan,
+    }
+
+# -- reporting tools --------------------------------------------------------
+
+# One canonical label per period; ISO dates are looked up in the same tables.
+_PERIODE_ALIAS = {
+    "hari ini": "hari ini",
+    "today": "hari ini",
+    "kemarin": "kemarin",
+    "minggu ini": "minggu ini",
+    "pekan ini": "minggu ini",
+    "bulan ini": "bulan ini",
+    "bulan lalu": "bulan lalu",
+    "bulan kemarin": "bulan lalu",
+    "tahun ini": "tahun ini",
+}
+
+_PENJUALAN: dict[str, tuple[int, int]] = {  # periode -> (transaksi, total rupiah)
+    "hari ini": (12, 2_450_000),
+    "kemarin": (14, 2_900_000),
+    "minggu ini": (88, 19_600_000),
+    "bulan ini": (340, 78_900_000),
+    "bulan lalu": (298, 64_200_000),
+    "tahun ini": (2140, 486_000_000),
+    "2026-10-05": (9, 1_780_000),
+}
+
+_PRODUK_TERLARIS: dict[str, tuple[str, int]] = {
+    "hari ini": ("Kaos Polos Hitam", 5),
+    "kemarin": ("Kaos Polos Hitam", 6),
+    "minggu ini": ("Kaos Polos Hitam", 32),
+    "bulan ini": ("Kaos Polos Hitam", 128),
+    "bulan lalu": ("Kaos Polos Putih", 101),
+    "tahun ini": ("Kaos Polos Hitam", 812),
+    "2026-10-05": ("Kaos Polos Hitam", 3),
+}
+
+_PENDAPATAN_CABANG: dict[str, dict[str, int]] = {
+    "pusat": {
+        "hari ini": 980_000,
+        "kemarin": 1_200_000,
+        "minggu ini": 8_400_000,
+        "bulan ini": 47_700_000,
+        "bulan lalu": 25_400_000,
+        "tahun ini": 190_000_000,
+        "2026-10-05": 700_000,
+    },
+    "samarinda": {
+        "hari ini": 1_470_000,
+        "kemarin": 1_700_000,
+        "minggu ini": 11_200_000,
+        "bulan ini": 31_200_000,
+        "bulan lalu": 38_800_000,
+        "tahun ini": 296_000_000,
+        "2026-10-05": 1_080_000,
+    },
+}
+
+_LEADS: dict[str, int] = {
+    "hari ini": 18,
+    "kemarin": 25,
+    "minggu ini": 96,
+    "bulan ini": 412,
+    "bulan lalu": 356,
+    "tahun ini": 2840,
+    "2026-10-05": 21,
+}
+
+_LEADS_SUMBER: dict[str, dict[str, int]] = {
+    "instagram": {
+        "hari ini": 7, "kemarin": 9, "minggu ini": 41,
+        "bulan ini": 173, "bulan lalu": 149, "tahun ini": 1180, "2026-10-05": 8,
+    },
+    "whatsapp": {
+        "hari ini": 6, "kemarin": 8, "minggu ini": 30,
+        "bulan ini": 132, "bulan lalu": 116, "tahun ini": 900, "2026-10-05": 6,
+    },
+    "tiktok": {
+        "hari ini": 3, "kemarin": 5, "minggu ini": 15,
+        "bulan ini": 74, "bulan lalu": 61, "tahun ini": 480, "2026-10-05": 4,
+    },
+    "google": {
+        "hari ini": 2, "kemarin": 3, "minggu ini": 10,
+        "bulan ini": 33, "bulan lalu": 30, "tahun ini": 280, "2026-10-05": 3,
+    },
+}
+
+def _periode(value: object) -> str:
+    p = _teks(value)
+    label = _PERIODE_ALIAS.get(p, p)
+    if label not in _PENJUALAN:
+        try:
+            label = _dt.date.fromisoformat(label).isoformat()
+        except ValueError as exc:
+            raise ToolError(f"periode tidak dikenal: {value!r}") from exc
+    if label not in _PENJUALAN:
+        raise ToolError(f"data tidak tersedia untuk periode: {value!r}")
+    return label
+
+def laporan_penjualan(periode: str, metrik: str | None = None) -> dict:
+    label = _periode(periode)
+    if metrik not in (None, ""):
+        if _teks(metrik) not in ("produk terlaris", "terlaris"):
+            raise ToolError(f"metrik tidak dikenal: {metrik!r}")
+        produk, unit = _PRODUK_TERLARIS[label]
+        return {
+            "periode": label,
+            "metrik": "produk terlaris",
+            "produk": produk,
+            "unit": unit,
+        }
+    transaksi, total = _PENJUALAN[label]
+    return {"periode": label, "transaksi": transaksi, "total": total}
+
+def laporan_pendapatan(periode: str, cabang: str | None = None) -> dict:
+    label = _periode(periode)
+    if cabang in (None, ""):
+        return {"periode": label, "cabang": "semua",
+                "pendapatan": _PENJUALAN[label][1]}
+    key = _pilih_kunci(cabang, _PENDAPATAN_CABANG, "cabang")
+    nilai = _PENDAPATAN_CABANG[key].get(label)
+    if nilai is None:
+        raise ToolError(f"data cabang {key} tidak tersedia untuk periode {label}")
+    return {"periode": label, "cabang": key, "pendapatan": nilai}
+
+def laporan_leads(periode: str, sumber: str | None = None) -> dict:
+    label = _periode(periode)
+    if sumber in (None, ""):
+        return {"periode": label, "sumber": "semua", "leads": _LEADS[label]}
+    key = _pilih_kunci(sumber, _LEADS_SUMBER, "sumber")
+    nilai = _LEADS_SUMBER[key].get(label)
+    if nilai is None:
+        raise ToolError(f"data sumber {key} tidak tersedia untuk periode {label}")
+    return {"periode": label, "sumber": key, "leads": nilai}
+
 _REGISTRY = {
     "parse_tanggal": parse_tanggal,
     "cari_penerbangan": cari_penerbangan,
@@ -245,6 +705,13 @@ _REGISTRY = {
     "hitung": hitung,
     "sapaan_waktu": sapaan_waktu,
     "parse_alamat": parse_alamat,
+    "cek_stok": cek_stok,
+    "jam_buka_toko": jam_buka_toko,
+    "cek_diskon": cek_diskon,
+    "cek_booking": cek_booking,
+    "laporan_penjualan": laporan_penjualan,
+    "laporan_pendapatan": laporan_pendapatan,
+    "laporan_leads": laporan_leads,
 }
 
 

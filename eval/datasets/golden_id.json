@@ -1,9 +1,10 @@
 {
   "meta": {
-    "name": "tugas golden (seed)",
+    "name": "tugas golden",
     "language": "id",
     "anchor_date": "2026-10-07",
-    "note": "Seed set. expected = the tool call(s) a correct agent must produce. Args listed are the ones checked; omitted optional args are not scored."
+    "source": "eval/datasets/raw/*.txt",
+    "note": "Generated from eval/datasets/raw/*.txt by scripts/build_dataset.py; do not edit by hand. expected = the tool call(s) a correct agent must produce, matched as an ordered subsequence; only the args listed are scored. For no-tool tasks expected == [] and answer_any_of lists the accepted final answers (any-of, normalized)."
   },
   "tasks": [
     {
@@ -106,7 +107,10 @@
         {
           "tool": "hitung",
           "args": {
-            "ekspresi": ["2 * 20 - 3", "40 - 3"]
+            "ekspresi": [
+              "2 * 20 - 3",
+              "40 - 3"
+            ]
           }
         }
       ],
@@ -120,7 +124,10 @@
         {
           "tool": "sapaan_waktu",
           "args": {
-            "jam": ["19.30", "19:30"]
+            "jam": [
+              "19.30",
+              "19:30"
+            ]
           }
         }
       ],
@@ -139,6 +146,693 @@
         }
       ],
       "notes": "Reverse address order: street -> RT/RW -> kelurahan -> kecamatan -> kota. teks scored verbatim; the tool extracts the city."
+    },
+    {
+      "id": "wa-stok-kaos",
+      "category": "wa/barang",
+      "prompt": "Halo kak, kaos polos warna hitam ukuran L masih ready?",
+      "expected": [
+        {
+          "tool": "cek_stok",
+          "args": {
+            "barang": "kaos polos",
+            "warna": "hitam",
+            "ukuran": "L"
+          }
+        }
+      ],
+      "notes": "Availability -> cek_stok. Extract barang+warna+ukuran from one casual line."
+    },
+    {
+      "id": "wa-stok-sepatu-ukuran",
+      "category": "wa/barang",
+      "prompt": "min, sepatu sneakers yang no 42 stoknya masih ada ga?",
+      "expected": [
+        {
+          "tool": "cek_stok",
+          "args": {
+            "barang": "sepatu sneakers",
+            "ukuran": "42"
+          }
+        }
+      ],
+      "notes": "\"no 42\" is a size, not a count; must not be read as jumlah."
+    },
+    {
+      "id": "wa-stok-warna",
+      "category": "wa/barang",
+      "prompt": "tas ransel buat laptop, yang warna navy ready nggak kak?",
+      "expected": [
+        {
+          "tool": "cek_stok",
+          "args": {
+            "barang": "tas ransel",
+            "warna": "navy"
+          }
+        }
+      ],
+      "notes": "Variant (warna) availability."
+    },
+    {
+      "id": "wa-stok-grosir",
+      "category": "wa/barang",
+      "prompt": "kalau aku ambil 50 pcs gelas plastik, stoknya cukup nggak?",
+      "expected": [
+        {
+          "tool": "cek_stok",
+          "args": {
+            "barang": "gelas plastik",
+            "jumlah": "50"
+          }
+        }
+      ],
+      "notes": "Bulk quantity availability (jumlah arg)."
+    },
+    {
+      "id": "wa-restock-kapan",
+      "category": "wa/barang",
+      "prompt": "hijab babydoll warna abu udah restock belum ya?",
+      "expected": [
+        {
+          "tool": "cek_stok",
+          "args": {
+            "barang": "hijab babydoll",
+            "warna": "abu"
+          }
+        }
+      ],
+      "notes": "Restock status is still a cek_stok call, not a date call."
+    },
+    {
+      "id": "wa-jam-buka-hari-ini",
+      "category": "wa/jam-buka",
+      "prompt": "tokonya buka jam berapa hari ini kak?",
+      "expected": [
+        {
+          "tool": "jam_buka_toko",
+          "args": {
+            "hari": "hari ini"
+          }
+        }
+      ],
+      "notes": "Opening hours for today."
+    },
+    {
+      "id": "wa-jam-tutup",
+      "category": "wa/jam-buka",
+      "prompt": "min, tutup jam berapa ya?",
+      "expected": [
+        {
+          "tool": "jam_buka_toko",
+          "args": {}
+        }
+      ],
+      "notes": "No day given -> default today (no arg)."
+    },
+    {
+      "id": "wa-buka-minggu",
+      "category": "wa/jam-buka",
+      "prompt": "hari minggu buka nggak?",
+      "expected": [
+        {
+          "tool": "jam_buka_toko",
+          "args": {
+            "hari": "minggu"
+          }
+        }
+      ],
+      "notes": "Day-of-week hours; Sunday schedule may differ."
+    },
+    {
+      "id": "wa-buka-tanggal-tertentu",
+      "category": "wa/jam-buka",
+      "prompt": "tanggal 25 Desember 2026 toko buka apa tutup?",
+      "expected": [
+        {
+          "tool": "parse_tanggal",
+          "args": {
+            "teks": "25 Desember 2026"
+          }
+        },
+        {
+          "tool": "jam_buka_toko",
+          "args": {
+            "hari": "2026-12-25"
+          }
+        }
+      ],
+      "notes": "Multi-step: resolve the date, then look up hours. Reuses parse_tanggal."
+    },
+    {
+      "id": "wa-buka-cabang",
+      "category": "wa/jam-buka",
+      "prompt": "yang cabang Samarinda buka sampai jam berapa?",
+      "expected": [
+        {
+          "tool": "jam_buka_toko",
+          "args": {
+            "cabang": "Samarinda"
+          }
+        }
+      ],
+      "notes": "Branch-scoped hours (cabang arg)."
+    },
+    {
+      "id": "wa-diskon-aktif",
+      "category": "wa/diskon",
+      "prompt": "lagi ada diskon apa aja nih kak?",
+      "expected": [
+        {
+          "tool": "cek_diskon",
+          "args": {}
+        }
+      ],
+      "notes": "General active promos -> cek_diskon with no arg."
+    },
+    {
+      "id": "wa-diskon-produk",
+      "category": "wa/diskon",
+      "prompt": "kemeja flanel ada diskon nggak?",
+      "expected": [
+        {
+          "tool": "cek_diskon",
+          "args": {
+            "produk": "kemeja flanel"
+          }
+        }
+      ],
+      "notes": "Product-specific discount."
+    },
+    {
+      "id": "wa-hitung-diskon",
+      "category": "wa/diskon",
+      "prompt": "kalau harga 180rb diskon 25%, aku bayar berapa kak?",
+      "expected": [
+        {
+          "tool": "hitung",
+          "args": {
+            "ekspresi": "180000 - 180000*25/100"
+          }
+        }
+      ],
+      "notes": "Reuses hitung; rupiah-text -> expression + percent math."
+    },
+    {
+      "id": "wa-promo-bundle",
+      "category": "wa/diskon",
+      "prompt": "paket skincare-nya ada promo bundling nggak min?",
+      "expected": [
+        {
+          "tool": "cek_diskon",
+          "args": {
+            "produk": "paket skincare"
+          }
+        }
+      ],
+      "notes": "Bundle-promo lookup for a product."
+    },
+    {
+      "id": "wa-voucher-kode",
+      "category": "wa/diskon",
+      "prompt": "kode voucher HEMAT50 masih bisa dipakai nggak?",
+      "expected": [
+        {
+          "tool": "cek_diskon",
+          "args": {
+            "kode": "HEMAT50"
+          }
+        }
+      ],
+      "notes": "Voucher-code lookup (kode arg)."
+    },
+    {
+      "id": "wa-booking-meja",
+      "category": "wa/booking",
+      "prompt": "mau booking meja buat 4 orang besok malam ya",
+      "expected": [
+        {
+          "tool": "parse_tanggal",
+          "args": {
+            "teks": "besok"
+          }
+        },
+        {
+          "tool": "cek_booking",
+          "args": {
+            "tempat": "meja",
+            "tanggal": "2026-10-08",
+            "jam": "19:00",
+            "jumlah_orang": "4"
+          }
+        }
+      ],
+      "notes": "Multi-step booking: resolve \"besok\" -> 2026-10-08, then check availability."
+    },
+    {
+      "id": "wa-booking-karaoke",
+      "category": "wa/booking",
+      "prompt": "sewa room karaoke minggu depan jam 8 malam masih ada?",
+      "expected": [
+        {
+          "tool": "parse_tanggal",
+          "args": {
+            "teks": "minggu depan"
+          }
+        },
+        {
+          "tool": "cek_booking",
+          "args": {
+            "tempat": "room karaoke",
+            "tanggal": "2026-10-14",
+            "jam": "20:00"
+          }
+        }
+      ],
+      "notes": "Multi-step; \"jam 8 malam\" -> 20:00."
+    },
+    {
+      "id": "wa-booking-studio",
+      "category": "wa/booking",
+      "prompt": "booking studio foto tanggal 12 Oktober 2026 jam 10 pagi bisa?",
+      "expected": [
+        {
+          "tool": "cek_booking",
+          "args": {
+            "tempat": "studio foto",
+            "tanggal": "2026-10-12",
+            "jam": "10:00"
+          }
+        }
+      ],
+      "notes": "Absolute date given -> no parse needed."
+    },
+    {
+      "id": "wa-booking-futsal",
+      "category": "wa/booking",
+      "prompt": "lapangan futsal malam ini jam 9 kosong ga?",
+      "expected": [
+        {
+          "tool": "cek_booking",
+          "args": {
+            "tempat": "lapangan futsal",
+            "tanggal": "2026-10-07",
+            "jam": "21:00"
+          }
+        }
+      ],
+      "notes": "\"malam ini\" = anchor date; 9 malam -> 21:00. Implicit-date handling."
+    },
+    {
+      "id": "wa-booking-ulang-tahun",
+      "category": "wa/booking",
+      "prompt": "mau reservasi tempat buat acara ulang tahun 20 orang, minggu depan bisa?",
+      "expected": [
+        {
+          "tool": "parse_tanggal",
+          "args": {
+            "teks": "minggu depan"
+          }
+        },
+        {
+          "tool": "cek_booking",
+          "args": {
+            "tempat": "reservasi acara",
+            "tanggal": "2026-10-14",
+            "jumlah_orang": "20"
+          }
+        }
+      ],
+      "notes": "Party reservation, jumlah_orang arg, no time given (time optional)."
+    },
+    {
+      "id": "id-abstain-sapaan",
+      "category": "no-tool/abstain",
+      "prompt": "Halo, apa kabar?",
+      "expected": [],
+      "answer_any_of": [
+        "Baik, terima kasih",
+        "Baik. Ada yang bisa dibantu?"
+      ],
+      "notes": "A greeting needs no tool; calling one is the discipline failure."
+    },
+    {
+      "id": "id-abstain-opini",
+      "category": "no-tool/abstain",
+      "prompt": "Menurutmu, lebih enak kopi atau teh?",
+      "expected": [],
+      "answer_any_of": [
+        "Dua-duanya enak, tergantung selera."
+      ],
+      "notes": "Subjective; no tool can ground the answer."
+    },
+    {
+      "id": "wa-owner-jual-hari-ini",
+      "category": "wa/owner-penjualan",
+      "prompt": "hari ini penjualan berapa?",
+      "expected": [
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "hari ini"
+          }
+        }
+      ],
+      "notes": "Single-tool baseline for the sales-report tool."
+    },
+    {
+      "id": "wa-owner-jual-bulan-ini",
+      "category": "wa/owner-penjualan",
+      "prompt": "laporan penjualan bulan ini gimana?",
+      "expected": [
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "bulan ini"
+          }
+        }
+      ],
+      "notes": "Month-to-date sales."
+    },
+    {
+      "id": "wa-owner-jual-bulan-lalu",
+      "category": "wa/owner-penjualan",
+      "prompt": "bulan lalu kita jualan berapa?",
+      "expected": [
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "bulan lalu"
+          }
+        }
+      ],
+      "notes": "Previous month; distinct period label."
+    },
+    {
+      "id": "wa-owner-jual-3periode",
+      "category": "wa/owner-penjualan",
+      "prompt": "bandingin dong penjualan hari ini, bulan ini, dan bulan lalu",
+      "expected": [
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "hari ini"
+          }
+        },
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "bulan ini"
+          }
+        },
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "bulan lalu"
+          }
+        }
+      ],
+      "notes": "MULTI-TOOL: one report call per requested period, in order."
+    },
+    {
+      "id": "wa-owner-jual-tanggal",
+      "category": "wa/owner-penjualan",
+      "prompt": "penjualan tanggal 5 Oktober 2026 berapa?",
+      "expected": [
+        {
+          "tool": "parse_tanggal",
+          "args": {
+            "teks": "5 Oktober 2026"
+          }
+        },
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "2026-10-05"
+          }
+        }
+      ],
+      "notes": "MULTI-TOOL: resolve the absolute date, then query that day."
+    },
+    {
+      "id": "wa-owner-omzet-hari-ini",
+      "category": "wa/owner-pendapatan",
+      "prompt": "pendapatan hari ini udah masuk berapa?",
+      "expected": [
+        {
+          "tool": "laporan_pendapatan",
+          "args": {
+            "periode": "hari ini"
+          }
+        }
+      ],
+      "notes": "Revenue today."
+    },
+    {
+      "id": "wa-owner-omzet-bulan-ini",
+      "category": "wa/owner-pendapatan",
+      "prompt": "total pendapatan bulan ini?",
+      "expected": [
+        {
+          "tool": "laporan_pendapatan",
+          "args": {
+            "periode": "bulan ini"
+          }
+        }
+      ],
+      "notes": "Revenue MTD."
+    },
+    {
+      "id": "wa-owner-omzet-bulan-lalu",
+      "category": "wa/owner-pendapatan",
+      "prompt": "pendapatan bulan lalu berapa ya?",
+      "expected": [
+        {
+          "tool": "laporan_pendapatan",
+          "args": {
+            "periode": "bulan lalu"
+          }
+        }
+      ],
+      "notes": "Revenue previous month."
+    },
+    {
+      "id": "wa-owner-omzet-banding-persen",
+      "category": "wa/owner-pendapatan",
+      "prompt": "pendapatan bulan ini naik berapa persen dibanding bulan lalu?",
+      "expected": [
+        {
+          "tool": "laporan_pendapatan",
+          "args": {
+            "periode": "bulan ini"
+          }
+        },
+        {
+          "tool": "laporan_pendapatan",
+          "args": {
+            "periode": "bulan lalu"
+          }
+        },
+        {
+          "tool": "hitung",
+          "args": {
+            "ekspresi": "(78900000 - 64200000) / 64200000 * 100"
+          }
+        }
+      ],
+      "notes": "MULTI-TOOL: two revenue calls + hitung for the growth percentage."
+    },
+    {
+      "id": "wa-owner-omzet-cabang",
+      "category": "wa/owner-pendapatan",
+      "prompt": "pendapatan cabang Samarinda bulan ini berapa?",
+      "expected": [
+        {
+          "tool": "laporan_pendapatan",
+          "args": {
+            "periode": "bulan ini",
+            "cabang": "Samarinda"
+          }
+        }
+      ],
+      "notes": "Branch-scoped revenue (cabang arg)."
+    },
+    {
+      "id": "wa-owner-leads-hari-ini",
+      "category": "wa/owner-leads",
+      "prompt": "hari ini dapet berapa leads?",
+      "expected": [
+        {
+          "tool": "laporan_leads",
+          "args": {
+            "periode": "hari ini"
+          }
+        }
+      ],
+      "notes": "Lead count today."
+    },
+    {
+      "id": "wa-owner-leads-bulan-ini",
+      "category": "wa/owner-leads",
+      "prompt": "total leads bulan ini berapa?",
+      "expected": [
+        {
+          "tool": "laporan_leads",
+          "args": {
+            "periode": "bulan ini"
+          }
+        }
+      ],
+      "notes": "Lead count MTD."
+    },
+    {
+      "id": "wa-owner-leads-bulan-lalu",
+      "category": "wa/owner-leads",
+      "prompt": "leads bulan lalu dapet berapa?",
+      "expected": [
+        {
+          "tool": "laporan_leads",
+          "args": {
+            "periode": "bulan lalu"
+          }
+        }
+      ],
+      "notes": "Lead count previous month."
+    },
+    {
+      "id": "wa-owner-leads-3periode",
+      "category": "wa/owner-leads",
+      "prompt": "bandingin leads hari ini, bulan ini, sama bulan lalu dong",
+      "expected": [
+        {
+          "tool": "laporan_leads",
+          "args": {
+            "periode": "hari ini"
+          }
+        },
+        {
+          "tool": "laporan_leads",
+          "args": {
+            "periode": "bulan ini"
+          }
+        },
+        {
+          "tool": "laporan_leads",
+          "args": {
+            "periode": "bulan lalu"
+          }
+        }
+      ],
+      "notes": "MULTI-TOOL: one leads call per period."
+    },
+    {
+      "id": "wa-owner-leads-sumber",
+      "category": "wa/owner-leads",
+      "prompt": "leads dari Instagram bulan ini ada berapa?",
+      "expected": [
+        {
+          "tool": "laporan_leads",
+          "args": {
+            "periode": "bulan ini",
+            "sumber": "instagram"
+          }
+        }
+      ],
+      "notes": "Leads filtered by source (sumber arg)."
+    },
+    {
+      "id": "wa-owner-konversi-leads",
+      "category": "wa/owner-leads",
+      "prompt": "dari semua leads bulan ini, 96 yang closing. konversinya berapa persen?",
+      "expected": [
+        {
+          "tool": "laporan_leads",
+          "args": {
+            "periode": "bulan ini"
+          }
+        },
+        {
+          "tool": "hitung",
+          "args": {
+            "ekspresi": "96 / 412 * 100"
+          }
+        }
+      ],
+      "notes": "The total is not in the prompt: fetch it before computing the rate."
+    },
+    {
+      "id": "wa-owner-produk-terlaris",
+      "category": "wa/owner-analitik",
+      "prompt": "produk terlaris bulan ini apa?",
+      "expected": [
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "bulan ini",
+            "metrik": "produk terlaris"
+          }
+        }
+      ],
+      "notes": "Sales tool with the metrik switch."
+    },
+    {
+      "id": "wa-owner-vs-target",
+      "category": "wa/owner-analitik",
+      "prompt": "target pendapatan bulan ini 100jt, udah tercapai berapa persen?",
+      "expected": [
+        {
+          "tool": "laporan_pendapatan",
+          "args": {
+            "periode": "bulan ini"
+          }
+        },
+        {
+          "tool": "hitung",
+          "args": {
+            "ekspresi": "78900000 / 100000000 * 100"
+          }
+        }
+      ],
+      "notes": "MULTI-TOOL: revenue call + hitung vs target."
+    },
+    {
+      "id": "wa-owner-laba-kotor",
+      "category": "wa/owner-analitik",
+      "prompt": "modal bulan ini 30jt. laba kotor berapa?",
+      "expected": [
+        {
+          "tool": "laporan_pendapatan",
+          "args": {
+            "periode": "bulan ini"
+          }
+        },
+        {
+          "tool": "hitung",
+          "args": {
+            "ekspresi": "78900000 - 30000000"
+          }
+        }
+      ],
+      "notes": "Revenue is not in the prompt: fetch it, then subtract the stated cost."
+    },
+    {
+      "id": "wa-owner-tren-penjualan",
+      "category": "wa/owner-analitik",
+      "prompt": "tren penjualan 2 bulan terakhir gimana?",
+      "expected": [
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "bulan lalu"
+          }
+        },
+        {
+          "tool": "laporan_penjualan",
+          "args": {
+            "periode": "bulan ini"
+          }
+        }
+      ],
+      "notes": "MULTI-TOOL: two sales calls for the trend. (Period vocab has no \"2 bulan lalu\".)"
     }
   ]
 }

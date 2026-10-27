@@ -1,0 +1,77 @@
+# core.txt — the original 9 hand-written tool-call tasks.
+#
+# Seeded by hand in golden_id.json and transcribed verbatim to raw text. Arg
+# values are the ones the scorer checks, not a full tool call: omitted optional
+# args are not scored. A list value means any-of accepted forms.
+# Anchor date 2026-10-07: "besok" = 2026-10-08, "minggu depan" = 2026-10-14.
+
+id: id-flight-abs
+category: multi-step/abs-date
+Q: Saya mau terbang dari Jakarta ke Makassar tanggal 12 Oktober 2026. Tolong carikan penerbangannya.
+T: cari_penerbangan(asal="Jakarta"; tujuan="Makassar"; tanggal="2026-10-12")
+N: Date already absolute — no parse needed.
+
+---
+
+id: id-saldo-arith
+category: arithmetic
+Q: Saldo saya Rp1.200.000. Habis Rp150.000 buat makan. Sekarang sisa berapa?
+T: hitung(ekspresi="1200000 - 150000")
+N: Model must translate rupiah text into an arithmetic expression.
+
+---
+
+id: id-cuaca-relative
+category: multi-step/relative-date
+Q: Cuaca di Samarinda minggu depan gimana?
+T: parse_tanggal(teks="minggu depan")
+T: cek_cuaca(kota="Samarinda")
+N: Requires resolving 'minggu depan' before calling weather. Only city is scored on cek_cuaca.
+
+---
+
+id: id-tanggal-simple
+category: date-resolution
+Q: Besok tanggal berapa? Jawab format YYYY-MM-DD.
+T: parse_tanggal(teks="besok")
+N: Single-step relative date.
+
+---
+
+id: id-tanggal-lusa
+category: date-resolution
+Q: Meeting-ku lusa, tanggal berapa?
+T: parse_tanggal(teks="lusa")
+N: 'lusa' is anchor +2 days, not +1; models collapse it to 'besok'.
+
+---
+
+id: id-tanggal-ddmm
+category: date-resolution
+Q: Tiketnya tanggal 7/10. Itu 7 Oktober atau 10 Juli?
+T: parse_tanggal(teks="7/10")
+N: DD/MM convention: 7/10 resolves to 2026-10-07, not MM/DD.
+
+---
+
+id: id-satuan-kodi
+category: arithmetic/local-units
+Q: Saya beli 2 kodi telur, pecah 3 butir. Sisa berapa butir?
+T: hitung(ekspresi=["2 * 20 - 3", "40 - 3"])
+N: kodi = 20. Accepted equivalent forms enumerated (any-of arg matching).
+
+---
+
+id: id-sapaan-malam
+category: cultural/greeting
+Q: Sekarang jam 19.30 di Jakarta. Sapaannya apa — selamat pagi, siang, sore, atau malam?
+T: sapaan_waktu(jam=["19.30", "19:30"])
+N: After maghrib the greeting is 'malam', not 'sore' (English 'evening' transfer). Time accepted as 19.30 or 19:30.
+
+---
+
+id: id-alamat-kota
+category: grounding/address
+Q: Kirim ke Jl. Pahlawan No. 12, RT 03/RW 05, Kel. Sungai Pinang Dalam, Kec. Samarinda Utara, Samarinda. Kota tujuannya apa?
+T: parse_alamat(teks="Jl. Pahlawan No. 12, RT 03/RW 05, Kel. Sungai Pinang Dalam, Kec. Samarinda Utara, Samarinda")
+N: Reverse address order: street -> RT/RW -> kelurahan -> kecamatan -> kota. teks scored verbatim; the tool extracts the city.

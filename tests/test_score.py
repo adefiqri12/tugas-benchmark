@@ -275,6 +275,10 @@ def test_no_tool_answer_match_is_ok():
     assert r.arg_accuracy == 1.0
     assert r.exact_match is True
 
+def test_no_tool_answer_ignores_trailing_punctuation():
+    r = score_task(NO_TOOL_ANSWER, "m", Trajectory(final_text="Baik, terima kasih!"))
+    assert r.failure == FailureType.OK
+
 
 def test_no_tool_answer_mismatch_is_wrong_answer():
     # Abstaining is necessary but not sufficient: the text must match.

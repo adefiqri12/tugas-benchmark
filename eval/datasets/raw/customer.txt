@@ -1,0 +1,191 @@
+# customer.txt — consumer <-> admin WhatsApp flows (tool-calling tasks).
+#
+# 20 flows: product availability, opening hours, discounts, booking. The
+# admin's answer must be grounded by the listed T: call(s). R: holds the
+# expected reply for review only; it is never compiled into the JSON.
+# Anchor date 2026-10-07, so "besok" = 2026-10-08, "minggu depan" = 2026-10-14.
+
+id: wa-stok-kaos
+category: wa/barang
+Q: Halo kak, kaos polos warna hitam ukuran L masih ready?
+T: cek_stok(barang="kaos polos"; warna="hitam"; ukuran="L")
+R: Ready kak! Kaos polos hitam ukuran L masih ada stok.
+N: Availability -> cek_stok. Extract barang+warna+ukuran from one casual line.
+
+---
+
+id: wa-stok-sepatu-ukuran
+category: wa/barang
+Q: min, sepatu sneakers yang no 42 stoknya masih ada ga?
+T: cek_stok(barang="sepatu sneakers"; ukuran="42")
+R: Masih ada kak, sepatu sneakers ukuran 42 ready.
+N: "no 42" is a size, not a count; must not be read as jumlah.
+
+---
+
+id: wa-stok-warna
+category: wa/barang
+Q: tas ransel buat laptop, yang warna navy ready nggak kak?
+T: cek_stok(barang="tas ransel"; warna="navy")
+R: Ready kak, tas ransel laptop warna navy masih ada.
+N: Variant (warna) availability.
+
+---
+
+id: wa-stok-grosir
+category: wa/barang
+Q: kalau aku ambil 50 pcs gelas plastik, stoknya cukup nggak?
+T: cek_stok(barang="gelas plastik"; jumlah="50")
+R: Cukup kak, stok gelas plastik kami lebih dari 50 pcs.
+N: Bulk quantity availability (jumlah arg).
+
+---
+
+id: wa-restock-kapan
+category: wa/barang
+Q: hijab babydoll warna abu udah restock belum ya?
+T: cek_stok(barang="hijab babydoll"; warna="abu")
+R: Maaf kak, hijab babydoll warna abu masih kosong; restock minggu depan.
+N: Restock status is still a cek_stok call, not a date call.
+
+---
+
+id: wa-jam-buka-hari-ini
+category: wa/jam-buka
+Q: tokonya buka jam berapa hari ini kak?
+T: jam_buka_toko(hari="hari ini")
+R: Toko buka jam 09.00 sampai 21.00 hari ini kak.
+N: Opening hours for today.
+
+---
+
+id: wa-jam-tutup
+category: wa/jam-buka
+Q: min, tutup jam berapa ya?
+T: jam_buka_toko()
+R: Kami tutup jam 21.00 kak.
+N: No day given -> default today (no arg).
+
+---
+
+id: wa-buka-minggu
+category: wa/jam-buka
+Q: hari minggu buka nggak?
+T: jam_buka_toko(hari="minggu")
+R: Hari Minggu kami tetap buka kak, jam 10.00-20.00.
+N: Day-of-week hours; Sunday schedule may differ.
+
+---
+
+id: wa-buka-tanggal-tertentu
+category: wa/jam-buka
+Q: tanggal 25 Desember 2026 toko buka apa tutup?
+T: parse_tanggal(teks="25 Desember 2026")
+T: jam_buka_toko(hari="2026-12-25")
+R: Tanggal 25 Desember 2026 kami tutup kak (libur Natal).
+N: Multi-step: resolve the date, then look up hours. Reuses parse_tanggal.
+
+---
+
+id: wa-buka-cabang
+category: wa/jam-buka
+Q: yang cabang Samarinda buka sampai jam berapa?
+T: jam_buka_toko(cabang="Samarinda")
+R: Cabang Samarinda buka sampai jam 21.30 kak.
+N: Branch-scoped hours (cabang arg).
+
+---
+
+id: wa-diskon-aktif
+category: wa/diskon
+Q: lagi ada diskon apa aja nih kak?
+T: cek_diskon()
+R: Sekarang ada promo diskon 20% untuk semua kaos kak.
+N: General active promos -> cek_diskon with no arg.
+
+---
+
+id: wa-diskon-produk
+category: wa/diskon
+Q: kemeja flanel ada diskon nggak?
+T: cek_diskon(produk="kemeja flanel")
+R: Kemeja flanel sedang diskon 15% kak.
+N: Product-specific discount.
+
+---
+
+id: wa-hitung-diskon
+category: wa/diskon
+Q: kalau harga 180rb diskon 25%, aku bayar berapa kak?
+T: hitung(ekspresi="180000 - 180000*25/100")
+R: Jadi bayar Rp135.000 kak.
+N: Reuses hitung; rupiah-text -> expression + percent math.
+
+---
+
+id: wa-promo-bundle
+category: wa/diskon
+Q: paket skincare-nya ada promo bundling nggak min?
+T: cek_diskon(produk="paket skincare")
+R: Ada kak, paket skincare bundling diskon 30%.
+N: Bundle-promo lookup for a product.
+
+---
+
+id: wa-voucher-kode
+category: wa/diskon
+Q: kode voucher HEMAT50 masih bisa dipakai nggak?
+T: cek_diskon(kode="HEMAT50")
+R: Kode HEMAT50 masih aktif kak, potongan Rp50.000.
+N: Voucher-code lookup (kode arg).
+
+---
+
+id: wa-booking-meja
+category: wa/booking
+Q: mau booking meja buat 4 orang besok malam ya
+T: parse_tanggal(teks="besok")
+T: cek_booking(tempat="meja"; tanggal="2026-10-08"; jam="19:00"; jumlah_orang="4")
+R: Oke kak, meja untuk 4 orang besok malam jam 19.00 sudah kami catat.
+N: Multi-step booking: resolve "besok" -> 2026-10-08, then check availability.
+
+---
+
+id: wa-booking-karaoke
+category: wa/booking
+Q: sewa room karaoke minggu depan jam 8 malam masih ada?
+T: parse_tanggal(teks="minggu depan")
+T: cek_booking(tempat="room karaoke"; tanggal="2026-10-14"; jam="20:00")
+R: Masih ada kak, room karaoke minggu depan jam 20.00 kosong.
+N: Multi-step; "jam 8 malam" -> 20:00.
+
+---
+
+id: wa-booking-studio
+category: wa/booking
+Q: booking studio foto tanggal 12 Oktober 2026 jam 10 pagi bisa?
+T: cek_booking(tempat="studio foto"; tanggal="2026-10-12"; jam="10:00")
+R: Bisa kak, studio foto tanggal 12 Oktober 2026 jam 10.00 masih kosong.
+N: Absolute date given -> no parse needed.
+
+---
+
+id: wa-booking-futsal
+category: wa/booking
+Q: lapangan futsal malam ini jam 9 kosong ga?
+T: cek_booking(tempat="lapangan futsal"; tanggal="2026-10-07"; jam="21:00")
+R: Lapangan futsal malam ini jam 21.00 masih kosong kak.
+N: "malam ini" = anchor date; 9 malam -> 21:00. Implicit-date handling.
+
+---
+
+id: wa-booking-ulang-tahun
+category: wa/booking
+Q: mau reservasi tempat buat acara ulang tahun 20 orang, minggu depan bisa?
+T: parse_tanggal(teks="minggu depan")
+T: cek_booking(tempat="reservasi acara"; tanggal="2026-10-14"; jumlah_orang="20")
+R: Bisa kak, kami catat reservasi untuk 20 orang minggu depan.
+N: Party reservation, jumlah_orang arg, no time given (time optional).
+
+---
+

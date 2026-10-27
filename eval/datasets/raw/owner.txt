@@ -1,0 +1,195 @@
+# owner.txt — store owner <-> AI assistant analytics flows (tool-calling tasks).
+#
+# 20 flows. Period comparisons fire one report call per period, then hitung
+# computes the delta/percentage. Period vocab: "hari ini" | "kemarin" |
+# "minggu ini" | "bulan ini" | "bulan lalu" | "tahun ini" | YYYY-MM-DD.
+# Anchor date 2026-10-07: bulan ini = 2026-10, bulan lalu = 2026-09.
+
+id: wa-owner-jual-hari-ini
+category: wa/owner-penjualan
+Q: hari ini penjualan berapa?
+T: laporan_penjualan(periode="hari ini")
+R: Penjualan hari ini 12 transaksi, total Rp2.450.000 kak.
+N: Single-tool baseline for the sales-report tool.
+
+---
+
+id: wa-owner-jual-bulan-ini
+category: wa/owner-penjualan
+Q: laporan penjualan bulan ini gimana?
+T: laporan_penjualan(periode="bulan ini")
+R: Bulan ini 340 transaksi, total Rp78.900.000.
+N: Month-to-date sales.
+
+---
+
+id: wa-owner-jual-bulan-lalu
+category: wa/owner-penjualan
+Q: bulan lalu kita jualan berapa?
+T: laporan_penjualan(periode="bulan lalu")
+R: Bulan lalu 298 transaksi, total Rp64.200.000.
+N: Previous month; distinct period label.
+
+---
+
+id: wa-owner-jual-3periode
+category: wa/owner-penjualan
+Q: bandingin dong penjualan hari ini, bulan ini, dan bulan lalu
+T: laporan_penjualan(periode="hari ini")
+T: laporan_penjualan(periode="bulan ini")
+T: laporan_penjualan(periode="bulan lalu")
+R: Hari ini Rp2,45jt; bulan ini Rp78,9jt; bulan lalu Rp64,2jt.
+N: MULTI-TOOL: one report call per requested period, in order.
+
+---
+
+id: wa-owner-jual-tanggal
+category: wa/owner-penjualan
+Q: penjualan tanggal 5 Oktober 2026 berapa?
+T: parse_tanggal(teks="5 Oktober 2026")
+T: laporan_penjualan(periode="2026-10-05")
+R: Tanggal 5 Oktober 2026: 9 transaksi, Rp1.780.000.
+N: MULTI-TOOL: resolve the absolute date, then query that day.
+
+---
+
+id: wa-owner-omzet-hari-ini
+category: wa/owner-pendapatan
+Q: pendapatan hari ini udah masuk berapa?
+T: laporan_pendapatan(periode="hari ini")
+R: Pendapatan hari ini Rp2.450.000 kak.
+N: Revenue today.
+
+---
+
+id: wa-owner-omzet-bulan-ini
+category: wa/owner-pendapatan
+Q: total pendapatan bulan ini?
+T: laporan_pendapatan(periode="bulan ini")
+R: Pendapatan bulan ini Rp78.900.000.
+N: Revenue MTD.
+
+---
+
+id: wa-owner-omzet-bulan-lalu
+category: wa/owner-pendapatan
+Q: pendapatan bulan lalu berapa ya?
+T: laporan_pendapatan(periode="bulan lalu")
+R: Pendapatan bulan lalu Rp64.200.000.
+N: Revenue previous month.
+
+---
+
+id: wa-owner-omzet-banding-persen
+category: wa/owner-pendapatan
+Q: pendapatan bulan ini naik berapa persen dibanding bulan lalu?
+T: laporan_pendapatan(periode="bulan ini")
+T: laporan_pendapatan(periode="bulan lalu")
+T: hitung(ekspresi="(78900000 - 64200000) / 64200000 * 100")
+R: Naik sekitar 22,9% dibanding bulan lalu.
+N: MULTI-TOOL: two revenue calls + hitung for the growth percentage.
+
+---
+
+id: wa-owner-omzet-cabang
+category: wa/owner-pendapatan
+Q: pendapatan cabang Samarinda bulan ini berapa?
+T: laporan_pendapatan(periode="bulan ini"; cabang="Samarinda")
+R: Pendapatan cabang Samarinda bulan ini Rp31.200.000.
+N: Branch-scoped revenue (cabang arg).
+
+---
+
+id: wa-owner-leads-hari-ini
+category: wa/owner-leads
+Q: hari ini dapet berapa leads?
+T: laporan_leads(periode="hari ini")
+R: Hari ini 18 leads masuk kak.
+N: Lead count today.
+
+---
+
+id: wa-owner-leads-bulan-ini
+category: wa/owner-leads
+Q: total leads bulan ini berapa?
+T: laporan_leads(periode="bulan ini")
+R: Bulan ini total 412 leads.
+N: Lead count MTD.
+
+---
+
+id: wa-owner-leads-bulan-lalu
+category: wa/owner-leads
+Q: leads bulan lalu dapet berapa?
+T: laporan_leads(periode="bulan lalu")
+R: Bulan lalu 356 leads.
+N: Lead count previous month.
+
+---
+
+id: wa-owner-leads-3periode
+category: wa/owner-leads
+Q: bandingin leads hari ini, bulan ini, sama bulan lalu dong
+T: laporan_leads(periode="hari ini")
+T: laporan_leads(periode="bulan ini")
+T: laporan_leads(periode="bulan lalu")
+R: Hari ini 18; bulan ini 412; bulan lalu 356.
+N: MULTI-TOOL: one leads call per period.
+
+---
+
+id: wa-owner-leads-sumber
+category: wa/owner-leads
+Q: leads dari Instagram bulan ini ada berapa?
+T: laporan_leads(periode="bulan ini"; sumber="instagram")
+R: Dari Instagram bulan ini 173 leads.
+N: Leads filtered by source (sumber arg).
+
+---
+
+id: wa-owner-konversi-leads
+category: wa/owner-leads
+Q: dari semua leads bulan ini, 96 yang closing. konversinya berapa persen?
+T: laporan_leads(periode="bulan ini")
+T: hitung(ekspresi="96 / 412 * 100")
+R: Konversi sekitar 23,3%.
+N: The total is not in the prompt: fetch it before computing the rate.
+
+---
+
+id: wa-owner-produk-terlaris
+category: wa/owner-analitik
+Q: produk terlaris bulan ini apa?
+T: laporan_penjualan(periode="bulan ini"; metrik="produk terlaris")
+R: Produk terlaris bulan ini: Kaos Polos Hitam (128 pcs).
+N: Sales tool with the metrik switch.
+
+---
+
+id: wa-owner-vs-target
+category: wa/owner-analitik
+Q: target pendapatan bulan ini 100jt, udah tercapai berapa persen?
+T: laporan_pendapatan(periode="bulan ini")
+T: hitung(ekspresi="78900000 / 100000000 * 100")
+R: Baru sekitar 78,9% dari target.
+N: MULTI-TOOL: revenue call + hitung vs target.
+
+---
+
+id: wa-owner-laba-kotor
+category: wa/owner-analitik
+Q: modal bulan ini 30jt. laba kotor berapa?
+T: laporan_pendapatan(periode="bulan ini")
+T: hitung(ekspresi="78900000 - 30000000")
+R: Laba kotor bulan ini Rp48.900.000.
+N: Revenue is not in the prompt: fetch it, then subtract the stated cost.
+
+---
+
+id: wa-owner-tren-penjualan
+category: wa/owner-analitik
+Q: tren penjualan 2 bulan terakhir gimana?
+T: laporan_penjualan(periode="bulan lalu")
+T: laporan_penjualan(periode="bulan ini")
+R: Bulan lalu Rp64,2jt -> bulan ini Rp78,9jt, tren naik.
+N: MULTI-TOOL: two sales calls for the trend. (Period vocab has no "2 bulan lalu".)
