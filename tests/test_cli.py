@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from pathlib import Path
 
@@ -199,4 +200,7 @@ def test_cli_rejects_invalid_timeout(value, tmp_path) -> None:
         app, ["run", "-m", "fake", "--timeout", value, str(default_tasks_path())]
     )
     assert result.exit_code == 2, result.output
-    assert "Invalid value for '--timeout'" in result.output
+    plain = " ".join(
+        re.sub(r"[│╭╮╰╯─]", " ", re.sub(r"\x1b\[[0-9;]*m", "", result.output)).split()
+    )
+    assert "Invalid value for '--timeout'" in plain, plain

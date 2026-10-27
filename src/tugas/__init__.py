@@ -9,4 +9,4 @@ __all__ = [
     "Task", "ExpectedCall", "ToolCallRecord", "Trajectory", "TaskResult", "FailureType",
     "load_tasks", "run_agent", "score_task", "summarize", "TOOL_SPECS", "execute",
 ]
-__version__ = "0.1.9"
+__version__ = "0.1.10"
