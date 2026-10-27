@@ -193,3 +193,7 @@ def test_duplicate_id_across_sources_rejected(tmp_path):
     (raw / "b.txt").write_text("id: same\nQ: y\nT: hitung()\n", encoding="utf-8")
     with pytest.raises(RawTaskError, match="lintas sumber"):
         builder.build_tasks(raw)
+
+def test_parse_raw_rejects_non_string_input() -> None:
+    with pytest.raises(RawTaskError):
+        parse_raw(b"id: x")

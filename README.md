@@ -25,7 +25,7 @@ The tasks target conventions that transfer poorly from English:
 - Leaderboard: **not live yet**. Scores are reproducible locally from the
   commands below; a public leaderboard is the next milestone.
 - 51 hand-written tasks over 13 deterministic mock tools.
-- 153 offline tests, no network required.
+- 150+ offline tests, no network required.
 
 ## What it measures
 

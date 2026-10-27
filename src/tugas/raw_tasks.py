@@ -278,6 +278,8 @@ def _parse_block(block: list[tuple[int, str]]) -> dict:
 
 def parse_raw(text: str) -> list[dict]:
     """Parse raw-text task entries into golden task dicts."""
+    if not isinstance(text, str):
+        raise RawTaskError(f"input harus string, bukan {type(text).__name__}")
     tasks = [_parse_block(block) for block in _iter_blocks(text)]
     dupes = sorted(i for i, n in Counter(t["id"] for t in tasks).items() if n > 1)
     if dupes:

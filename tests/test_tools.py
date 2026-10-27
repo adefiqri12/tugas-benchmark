@@ -361,3 +361,20 @@ def test_stock_dimensions_sum_to_total() -> None:
 def test_reporting_unknown_selection_raises(name: str, args: dict) -> None:
     with pytest.raises(ToolError):
         execute(name, args)
+
+def test_execute_rejects_non_string_tool_name() -> None:
+    with pytest.raises(ToolError):
+        execute(["parse_tanggal"], {})
+
+def test_cek_cuaca_rejects_range_over_two_weeks() -> None:
+    with pytest.raises(ToolError):
+        execute("cek_cuaca", {
+            "kota": "Samarinda",
+            "tanggal_mulai": "2026-10-01",
+            "tanggal_selesai": "2026-10-15",
+        })
+
+def test_cek_stok_rejects_underscore_quantity() -> None:
+    # int("1_0") is 10 in Python, but "1_0" is not a quantity a user typed.
+    with pytest.raises(ToolError):
+        execute("cek_stok", {"barang": "kaos polos", "jumlah": "1_0"})

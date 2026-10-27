@@ -240,6 +240,8 @@ def cek_cuaca(kota: str, tanggal_mulai: str, tanggal_selesai: str) -> dict:
     b = _dt.date.fromisoformat(tanggal_selesai)
     if b < a:
         raise ToolError("tanggal_selesai sebelum tanggal_mulai")
+    if (b - a).days > 13:
+        raise ToolError("rentang cuaca maksimal 14 hari")
     pola = ["cerah berawan", "hujan ringan", "berawan", "hujan petir", "cerah"]
     hari = []
     d = a
@@ -336,8 +338,11 @@ def _teks(value: object) -> str:
     return str(value).strip().lower()
 
 def _bulat(value: object, nama: str) -> int:
+    teks = str(value).strip()
+    if not _re.fullmatch(r"\+?\d+", teks):
+        raise ToolError(f"{nama} harus bilangan bulat: {value!r}")
     try:
-        n = int(str(value).strip())
+        n = int(teks)
     except (TypeError, ValueError) as exc:
         raise ToolError(f"{nama} harus bilangan bulat: {value!r}") from exc
     if n < 1:
@@ -726,6 +731,8 @@ def execute(name: str, args: dict) -> dict:
     to the model -- not an unhandled crash that the agent loop would mis-score as
     an API_ERROR.
     """
+    if not isinstance(name, str):
+        raise ToolError(f"nama tool harus string: {name!r}")
     fn = _REGISTRY.get(name)
     if fn is None:
         raise ToolError(f"tool tidak dikenal: {name!r}")
