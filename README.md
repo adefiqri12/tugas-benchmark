@@ -21,7 +21,7 @@ The tasks target conventions that transfer poorly from English:
 
 ## Status
 
-- Harness and dataset: **v0.1.6**, usable now.
+- Harness and dataset: **v0.1.7**, usable now.
 - Leaderboard: **not live yet**. Scores are reproducible locally from the
   commands below; a public leaderboard is the next milestone.
 - 51 hand-written tasks over 13 deterministic mock tools.
@@ -91,6 +91,10 @@ Environment variable names are case-sensitive.
 - 49 tool-call tasks and 2 no-tool abstain tasks,
 - 13 tools, all deterministic and offline,
 - one fixed anchor date (`2026-10-07`) so relative dates never drift.
+
+Loading a custom dataset also rejects duplicate ids, an empty task list, and
+tasks that define both `expected` and `answer_any_of` (or neither), so a broken
+file fails before any model is called.
 
 | Tool group | Tools |
 |---|---|

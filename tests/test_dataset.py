@@ -100,3 +100,40 @@ def test_generated_json_is_in_sync() -> None:
         text=True,
     )
     assert result.returncode == 0, result.stderr or result.stdout
+
+
+def _write_dataset(tmp_path: Path, tasks: list[dict]) -> Path:
+    path = tmp_path / "tasks.json"
+    path.write_text(json.dumps({"tasks": tasks}), encoding="utf-8")
+    return path
+
+
+def test_load_tasks_rejects_duplicate_ids(tmp_path: Path) -> None:
+    task = {"id": "same", "prompt": "p", "expected": [], "answer_any_of": ["ok"]}
+    path = _write_dataset(tmp_path, [task, task])
+    with pytest.raises(ValueError, match="id duplikat"):
+        load_tasks(path)
+
+
+def test_load_tasks_rejects_task_with_both_kinds(tmp_path: Path) -> None:
+    task = {
+        "id": "both",
+        "prompt": "p",
+        "expected": [{"tool": "hitung", "args": {"ekspresi": "1+1"}}],
+        "answer_any_of": ["2"],
+    }
+    path = _write_dataset(tmp_path, [task])
+    with pytest.raises(ValueError, match="tepat satu"):
+        load_tasks(path)
+
+
+def test_load_tasks_rejects_task_with_no_expected_behaviour(tmp_path: Path) -> None:
+    path = _write_dataset(tmp_path, [{"id": "empty", "prompt": "p", "expected": []}])
+    with pytest.raises(ValueError, match="tepat satu"):
+        load_tasks(path)
+
+
+def test_load_tasks_rejects_empty_dataset(tmp_path: Path) -> None:
+    path = _write_dataset(tmp_path, [])
+    with pytest.raises(ValueError, match="dataset kosong"):
+        load_tasks(path)
