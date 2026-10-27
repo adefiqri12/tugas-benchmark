@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from tugas.tools import (
+    _STOK,
     ToolError,
     execute,
     parse_alamat,
@@ -335,6 +336,18 @@ def test_laporan_leads_sources_sum_to_total() -> None:
         for s in ("instagram", "whatsapp", "tiktok", "google")
     )
     assert parts == total
+
+def test_stock_dimensions_sum_to_total() -> None:
+    # Aggregates and per-dimension breakdowns must tell the same story: a
+    # benchmark whose mock data contradicts itself teaches the wrong lesson.
+    for name, item in _STOK.items():
+        for dimension in ("ukuran", "warna"):
+            if dimension in item:
+                assert sum(item[dimension].values()) == item["stok"], (name, dimension)
+        for variant, count in item.get("varian", {}).items():
+            warna, ukuran = variant.split("|")
+            assert count <= item["warna"][warna], (name, variant, "warna")
+            assert count <= item["ukuran"][ukuran], (name, variant, "ukuran")
 
 @pytest.mark.parametrize(
     "name,args",

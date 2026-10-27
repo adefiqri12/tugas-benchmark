@@ -363,7 +363,7 @@ _STOK: dict[str, dict] = {
     },
     "sepatu sneakers": {
         "stok": 30,
-        "ukuran": {"40": 6, "41": 8, "42": 11, "43": 7, "44": 4},
+        "ukuran": {"40": 5, "41": 7, "42": 11, "43": 5, "44": 2},
         "warna": {"hitam": 18, "putih": 12},
         "varian": {"hitam|42": 7, "putih|42": 4},
     },
