@@ -21,7 +21,7 @@ The tasks target conventions that transfer poorly from English:
 
 ## Status
 
-- Harness and dataset: **v0.1.7**, usable now.
+- Harness and dataset: **v0.1.8**, usable now.
 - Leaderboard: **not live yet**. Scores are reproducible locally from the
   commands below; a public leaderboard is the next milestone.
 - 51 hand-written tasks over 13 deterministic mock tools.
@@ -75,11 +75,15 @@ export TUGAS_API_KEY=...
 
 .venv/bin/tugas run -m "auto/best-fast"
 .venv/bin/tugas run -m model-a,model-b --out results/run.json
+.venv/bin/tugas run -m model-a --timeout 10   # per-request gateway timeout
 ```
 
 If every task fails with `API_ERROR`, `tugas run` exits with status 2 after
 writing any `--out` file, so a misconfigured gateway cannot look like a
 successful zero score.
+
+`--timeout` bounds each gateway request (default 60 s); lower it when
+probing an unresponsive endpoint.
 
 Defaults: `TUGAS_BASE_URL=http://127.0.0.1:20129/v1`, `TUGAS_API_KEY=""`.
 Environment variable names are case-sensitive.

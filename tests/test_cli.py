@@ -89,7 +89,7 @@ def test_cli_run_writes_results(monkeypatch, tmp_path) -> None:
         t.id: [ToolCallRecord(tool=c.tool, args=dict(c.args)) for c in t.expected]
         for t in tasks
     }
-    monkeypatch.setattr(cli, "LLMAgent", lambda model: ScriptedAgent(model, plan))
+    monkeypatch.setattr(cli, "LLMAgent", lambda model, timeout: ScriptedAgent(model, plan))
     out = tmp_path / "results" / "run.json"
     result = CliRunner().invoke(
         app, ["run", "-m", "fake", str(default_tasks_path()), "--out", str(out)]
@@ -123,7 +123,7 @@ def test_cli_exits_nonzero_when_every_task_is_api_error(monkeypatch, tmp_path) -
             for t in tasks
         ]
 
-    monkeypatch.setattr(cli, "LLMAgent", lambda model: ScriptedAgent(model, {}))
+    monkeypatch.setattr(cli, "LLMAgent", lambda model, timeout: ScriptedAgent(model, {}))
     monkeypatch.setattr(cli, "run_agent", fake_run)
     out = tmp_path / "api_error.json"
     result = CliRunner().invoke(
@@ -139,7 +139,7 @@ def test_cli_rejects_empty_model_list(monkeypatch) -> None:
     from tugas import cli
 
     monkeypatch.setattr(
-        cli, "LLMAgent", lambda model: pytest.fail("agent must not be constructed")
+        cli, "LLMAgent", lambda model, timeout: pytest.fail("agent must not be constructed")
     )
     result = CliRunner().invoke(app, ["run", "-m", " , "])
     assert result.exit_code == 2, result.output
@@ -159,7 +159,7 @@ def test_cli_reports_unwritable_out(monkeypatch, tmp_path) -> None:
             for t in tasks
         ]
 
-    monkeypatch.setattr(cli, "LLMAgent", lambda model: ScriptedAgent(model, {}))
+    monkeypatch.setattr(cli, "LLMAgent", lambda model, timeout: ScriptedAgent(model, {}))
     monkeypatch.setattr(cli, "run_agent", fake_run)
     out_dir = tmp_path / "outdir"
     out_dir.mkdir()
@@ -168,3 +168,24 @@ def test_cli_reports_unwritable_out(monkeypatch, tmp_path) -> None:
     )
     assert result.exit_code == 1, result.output
     assert "gagal menulis" in result.output
+
+
+def test_cli_passes_timeout_to_agent(monkeypatch, tmp_path):
+    from tugas import cli
+
+    seen = {}
+    monkeypatch.setattr(
+        cli,
+        "LLMAgent",
+        lambda model, timeout: (
+            seen.update(model=model, timeout=timeout) or ScriptedAgent(model, {})
+        ),
+    )
+    monkeypatch.setattr(cli, "run_agent", lambda agent, tasks: [])
+
+    result = CliRunner().invoke(
+        app, ["run", "-m", "fake", "--timeout", "5", "--out", str(tmp_path / "o.json")]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert seen == {"model": "fake", "timeout": 5.0}
