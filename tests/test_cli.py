@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from pathlib import Path
 
 import pytest
@@ -76,3 +78,24 @@ def test_every_golden_task_replays_to_ok() -> None:
     assert len(results) == len(tasks)
     for result in results:
         assert result.failure == FailureType.OK, f"{result.task_id}: {result.failure}"
+
+def test_cli_run_writes_results(monkeypatch, tmp_path) -> None:
+    # Exercise the run command end to end with a scripted agent: no gateway,
+    # no network. Covers summary printing and --out JSON writing.
+    from tugas import cli
+
+    tasks = load_tasks(default_tasks_path())
+    plan = {
+        t.id: [ToolCallRecord(tool=c.tool, args=dict(c.args)) for c in t.expected]
+        for t in tasks
+    }
+    monkeypatch.setattr(cli, "LLMAgent", lambda model: ScriptedAgent(model, plan))
+    out = tmp_path / "results" / "run.json"
+    result = CliRunner().invoke(
+        app, ["run", "-m", "fake", str(default_tasks_path()), "--out", str(out)]
+    )
+    assert result.exit_code == 0, result.output
+    assert "exact_match=1.0" in result.output
+    rows = json.loads(out.read_text(encoding="utf-8"))
+    assert len(rows) == len(tasks)
+    assert {row["failure"] for row in rows} == {"OK"}
