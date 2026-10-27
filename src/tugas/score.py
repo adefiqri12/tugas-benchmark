@@ -152,9 +152,6 @@ def _classify(expected: list[ExpectedCall], calls: list[ToolCallRecord]) -> Fail
         if _unordered_arg_match(expected, calls) is not None:
             return FailureType.ORDER_ERROR
         return FailureType.BAD_ARGS
-    if len(calls) > len(expected):
-        return FailureType.EXTRA_TOOL
-    return FailureType.OK
 
 
 def score_task(task: Task, model: str, traj: Trajectory) -> TaskResult:

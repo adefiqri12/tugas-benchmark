@@ -378,3 +378,31 @@ def test_cek_stok_rejects_underscore_quantity() -> None:
     # int("1_0") is 10 in Python, but "1_0" is not a quantity a user typed.
     with pytest.raises(ToolError):
         execute("cek_stok", {"barang": "kaos polos", "jumlah": "1_0"})
+
+@pytest.mark.parametrize(
+    "jam,expected",
+    [
+        ("12 siang", "12:00"),
+        ("12 malam", "00:00"),
+        ("12 pagi", "00:00"),
+        ("8 malam", "20:00"),
+        ("8.30", "08:30"),
+        ("1 sore", "13:00"),
+    ],
+)
+def test_cek_booking_normalizes_indonesian_time(jam: str, expected: str) -> None:
+    result = execute("cek_booking", {
+        "tempat": "meja", "tanggal": "2026-10-08", "jam": jam,
+    })
+    assert result["jam"] == expected
+
+def test_cek_cuaca_returns_the_requested_window() -> None:
+    result = execute("cek_cuaca", {
+        "kota": "Samarinda",
+        "tanggal_mulai": "2026-10-07",
+        "tanggal_selesai": "2026-10-09",
+    })
+    assert [d["tanggal"] for d in result["ramalan"]] == [
+        "2026-10-07", "2026-10-08", "2026-10-09",
+    ]
+    assert all(d["prakiraan"] for d in result["ramalan"])

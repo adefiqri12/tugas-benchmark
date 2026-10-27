@@ -169,3 +169,20 @@ def test_llm_agent_respects_max_steps(monkeypatch):
 
     assert len(traj.calls) == 3
     assert traj.final_text == "(max_steps tercapai)"
+
+def test_malformed_tool_arguments_are_empty_and_reported(monkeypatch):
+    # A model can emit invalid JSON in `arguments`; the loop must not crash,
+    # must record the call, and must feed the tool error back to the model.
+    seen: dict = {}
+    bad = _tool_call("c1", "parse_tanggal", {})
+    bad["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"] = "not-json"
+    _install(monkeypatch, [bad, _answer("ok")], seen)
+    task = Task(
+        id="t",
+        prompt="Besok tanggal berapa?",
+        expected=[ExpectedCall(tool="parse_tanggal", args={"teks": "besok"})],
+    )
+    traj = agent.LLMAgent("mock").run(task)
+    assert traj.error is None
+    assert traj.calls[0].args == {}
+    assert "error" in json.loads(seen["tool_msgs"][0])

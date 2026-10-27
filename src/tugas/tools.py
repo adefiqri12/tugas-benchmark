@@ -530,7 +530,8 @@ def _jam(value: object) -> str:
     jam, menit, bagian = int(m.group(1)), int(m.group(2) or 0), m.group(3)
     if bagian in ("sore", "malam") and jam < 12:
         jam += 12
-    if bagian in ("pagi", "siang") and jam == 12:
+    # "12 siang" is noon; "12 pagi"/"12 malam" are midnight.
+    if bagian in ("pagi", "malam") and jam == 12:
         jam = 0
     if not (0 <= jam <= 23 and 0 <= menit <= 59):
         raise ToolError(f"jam tidak valid: {value!r}")
