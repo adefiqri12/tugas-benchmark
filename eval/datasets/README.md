@@ -55,9 +55,9 @@ A task has exactly one of:
 
 - `expected`: one or more tool calls that must appear, in order, in the agent's
   trajectory. Only the listed arguments are scored.
-- `answer_any_of`: accepted final answers for a no-tool task. The agent must
-  call nothing; the text is compared after case, whitespace, and
-  trailing-punctuation normalization.
+- `answer_any_of`: reference final answers for a no-tool task, replayed by the
+  offline baseline. Scoring checks only that no tool was called and the reply
+  is non-empty.
 
 An expected argument value may be a list of accepted forms (any-of), for example
 `"ekspresi": ["2 * 20 - 3", "40 - 3"]`.
@@ -70,7 +70,7 @@ Entries are separated by a line containing only `---`. Within an entry:
 - `category:` free-form category (optional, default `general`)
 - `Q:` the prompt, one line (required)
 - `T:` one expected tool call, repeatable (required for tool tasks)
-- `A:` one accepted answer, repeatable (required for no-tool tasks)
+- `A:` one reference answer, repeatable (required for no-tool tasks)
 - `R:` expected reply, review only, never compiled
 - `N:` notes (optional)
 

@@ -19,6 +19,8 @@ Entries are separated by a line containing only ``---``. Inside an entry:
 - ``N:``        notes (optional)
 
 An entry uses either ``T:`` lines (>=1) or ``A:`` lines (>=1), never both.
+``A:`` lines are reference replies for no-tool tasks; the scorer checks only
+that no tool was called and the reply is non-empty.
 
 ``T:`` syntax::
 
@@ -287,8 +289,8 @@ _META_NOTE = (
     "Generated from eval/datasets/raw/*.txt by scripts/build_dataset.py; do not "
     "edit by hand. expected = the tool call(s) a correct agent must produce, "
     "matched as an ordered subsequence; only the args listed are scored. For "
-    "no-tool tasks expected == [] and answer_any_of lists the accepted final "
-    "answers (any-of, normalized)."
+    "no-tool tasks expected == [] and answer_any_of lists reference replies; "
+    "they pass on abstention with a non-empty answer."
 )
 
 

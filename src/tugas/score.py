@@ -29,7 +29,6 @@ from .models import (
 _SEP = re.compile(r"(?<=\d)[.,](?=\d{3}(?:\D|$))")  # 1.200.000 -> 1200000
 _OPS = re.compile(r"\s*([+\-*/])\s*")                # "a - b" -> "a-b"
 _WS = re.compile(r"\s+")
-_TRAILING_PUNCT = re.compile(r"[\s.!?,]+$")
 
 
 def _norm(v: object) -> str:
@@ -54,17 +53,6 @@ def _arg_matches(expected_v: object, actual_v: object) -> bool:
 
 def _args_ok(expected: dict, got: dict) -> bool:
     return all(k in got and _arg_matches(v, got[k]) for k, v in expected.items())
-
-
-def _answer_ok(accepted: list[str], final_text: str) -> bool:
-    """A no-tool task's final text against its accepted answers (any-of).
-
-    Trailing punctuation is ignored, so "Baik, terima kasih!" still matches
-    the hand-written form "Baik, terima kasih". Word choice stays strict: a
-    different answer is WRONG_ANSWER.
-    """
-    got = _TRAILING_PUNCT.sub("", _norm(final_text))
-    return any(got == _TRAILING_PUNCT.sub("", _norm(a)) for a in accepted)
 
 
 def _match_subsequence(
@@ -185,16 +173,19 @@ def score_task(task: Task, model: str, traj: Trajectory) -> TaskResult:
     # the same greedy matching as the failure label, so duplicate expected
     # tools are counted per-occurrence, not per-unique-name.
     matched = _match_subsequence(expected, calls)
-    tool_selection = len(matched) / len(expected) if expected else 1.0
+    if expected:
+        tool_selection = len(matched) / len(expected)
+    else:
+        tool_selection = 1.0 if not calls else 0.0
 
-    # No-tool task (expected == []): the accepted final answers are the scored
-    # value. Abstaining with a wrong answer is WRONG_ANSWER, not OK.
-    answer_ok = _answer_ok(task.answer_any_of, traj.final_text) if task.answer_any_of else None
-    if failure == FailureType.OK and answer_ok is False:
+    # No-tool task (expected == []): the signal is abstention, not prose.
+    # `answer_any_of` is a reference reply (used by the scripted baseline);
+    # any non-empty answer passes, an empty one is WRONG_ANSWER.
+    if not expected and failure == FailureType.OK and not traj.final_text.strip():
         failure = FailureType.WRONG_ANSWER
 
-    # arg_accuracy: over matched pairs for tool tasks; for no-tool tasks it is
-    # the final-answer match (1.0/0.0) when an answer is pinned.
+    # arg_accuracy: matched args over all expected args for tool tasks; for
+    # no-tool tasks it mirrors the abstention outcome.
     pairs = matched
     if expected:
         ordered = _match_subsequence(expected, calls, require_args=True)
@@ -202,15 +193,18 @@ def score_task(task: Task, model: str, traj: Trajectory) -> TaskResult:
             pairs = ordered
         elif failure == FailureType.ORDER_ERROR:
             pairs = _unordered_arg_match(expected, calls) or matched
-    m = t = 0
+    m = 0
     for e, g in pairs:
         m += sum(1 for k, v in e.args.items()
                  if k in g.args and _arg_matches(v, g.args[k]))
-        t += len(e.args)
     if expected:
-        arg_accuracy = m / t if t else 1.0
+        # Denominator covers every expected arg, not only the args of calls
+        # that happened to match: no calls or a missing call must not look
+        # like perfect argument accuracy.
+        total = sum(len(e.args) for e in expected)
+        arg_accuracy = m / total if total else 1.0
     else:
-        arg_accuracy = 1.0 if answer_ok is not False else 0.0
+        arg_accuracy = 1.0 if failure == FailureType.OK else 0.0
 
     return TaskResult(
         task_id=task.id, model=model, failure=failure,

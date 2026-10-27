@@ -4,7 +4,7 @@
     "language": "id",
     "anchor_date": "2026-10-07",
     "source": "eval/datasets/raw/*.txt",
-    "note": "Generated from eval/datasets/raw/*.txt by scripts/build_dataset.py; do not edit by hand. expected = the tool call(s) a correct agent must produce, matched as an ordered subsequence; only the args listed are scored. For no-tool tasks expected == [] and answer_any_of lists the accepted final answers (any-of, normalized)."
+    "note": "Generated from eval/datasets/raw/*.txt by scripts/build_dataset.py; do not edit by hand. expected = the tool call(s) a correct agent must produce, matched as an ordered subsequence; only the args listed are scored. For no-tool tasks expected == [] and answer_any_of lists reference replies; they pass on abstention with a non-empty answer."
   },
   "tasks": [
     {
@@ -381,7 +381,10 @@
           "args": {
             "tempat": "meja",
             "tanggal": "2026-10-08",
-            "jam": "19:00",
+            "jam": [
+              "19:00",
+              "19.00"
+            ],
             "jumlah_orang": "4"
           }
         }
@@ -404,7 +407,10 @@
           "args": {
             "tempat": "room karaoke",
             "tanggal": "2026-10-14",
-            "jam": "20:00"
+            "jam": [
+              "20:00",
+              "20.00"
+            ]
           }
         }
       ],
@@ -420,7 +426,10 @@
           "args": {
             "tempat": "studio foto",
             "tanggal": "2026-10-12",
-            "jam": "10:00"
+            "jam": [
+              "10:00",
+              "10.00"
+            ]
           }
         }
       ],
@@ -436,7 +445,10 @@
           "args": {
             "tempat": "lapangan futsal",
             "tanggal": "2026-10-07",
-            "jam": "21:00"
+            "jam": [
+              "21:00",
+              "21.00"
+            ]
           }
         }
       ],

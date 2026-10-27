@@ -46,6 +46,8 @@ def test_no_call():
     r = score_task(TASK, "m", Trajectory())
     assert r.failure == FailureType.NO_TOOL_CALL
     assert r.tool_selection == 0.0
+    # No calls means no expected args matched, not vacuously perfect.
+    assert r.arg_accuracy == 0.0
 
 
 def test_missing_second_tool():
@@ -53,6 +55,7 @@ def test_missing_second_tool():
     r = score_task(TASK, "m", traj)
     assert r.failure == FailureType.MISSING_TOOL
     assert r.tool_selection == 0.5
+    assert r.arg_accuracy == 0.5
 
 
 def test_bad_args():
@@ -242,12 +245,18 @@ NO_TOOL = Task(id="no_tool", prompt="Jawab tanpa tool.", expected=[])
 
 
 def test_no_tool_task_abstaining_is_ok():
-    # expected=[] means a correct agent calls nothing at all.
-    r = score_task(NO_TOOL, "m", Trajectory())
+    # expected=[] means a correct agent calls nothing and still replies.
+    r = score_task(NO_TOOL, "m", Trajectory(final_text="Baik."))
     assert r.failure == FailureType.OK
     assert r.tool_selection == 1.0
     assert r.arg_accuracy == 1.0
     assert r.exact_match is True
+
+def test_no_tool_task_empty_answer_is_wrong_answer():
+    # Abstention without any reply is not an answer.
+    r = score_task(NO_TOOL, "m", Trajectory(final_text="   "))
+    assert r.failure == FailureType.WRONG_ANSWER
+    assert r.exact_match is False
 
 
 def test_no_tool_task_calling_anyway_is_wrong_tool():
@@ -269,23 +278,18 @@ NO_TOOL_ANSWER = Task(
 
 
 def test_no_tool_answer_match_is_ok():
-    # Accepted answers are any-of, matched after case/space normalization.
+    # Reference answers are not a required wording; any reply is fine.
     r = score_task(NO_TOOL_ANSWER, "m", Trajectory(final_text="baik,  terima kasih"))
     assert r.failure == FailureType.OK
     assert r.arg_accuracy == 1.0
     assert r.exact_match is True
 
-def test_no_tool_answer_ignores_trailing_punctuation():
-    r = score_task(NO_TOOL_ANSWER, "m", Trajectory(final_text="Baik, terima kasih!"))
-    assert r.failure == FailureType.OK
-
-
-def test_no_tool_answer_mismatch_is_wrong_answer():
-    # Abstaining is necessary but not sufficient: the text must match.
+def test_no_tool_answer_different_wording_is_ok():
+    # The benchmark scores tool use, not prose: a different but non-empty
+    # reply still passes the abstention task.
     r = score_task(NO_TOOL_ANSWER, "m", Trajectory(final_text="Halo juga"))
-    assert r.failure == FailureType.WRONG_ANSWER
-    assert r.arg_accuracy == 0.0
-    assert r.exact_match is False
+    assert r.failure == FailureType.OK
+    assert r.exact_match is True
 
 
 def test_no_tool_answer_but_called_tool_is_wrong_tool():

@@ -25,7 +25,7 @@ The tasks target conventions that transfer poorly from English:
 - Leaderboard: **not live yet**. Scores are reproducible locally from the
   commands below; a public leaderboard is the next milestone.
 - 51 hand-written tasks over 13 deterministic mock tools.
-- 150 offline tests, no network required.
+- 153 offline tests, no network required.
 
 ## What it measures
 
@@ -105,7 +105,7 @@ eval/datasets/raw/
 ```
 
 Each raw entry has an `id`, a `category`, a one-line prompt `Q`, and either
-`T:` expected tool calls or `A:` accepted answers. `R:` holds the expected reply
+`T:` expected tool calls or `A:` reference answers. `R:` holds the expected reply
 for review only and is never compiled. To add a task, edit a raw file, run the
 builder, and run the tests.
 
@@ -118,9 +118,10 @@ builder, and run the tests.
 - Argument matching normalizes thousands separators and operator spacing, so
   `"1.200.000 - 150.000"` matches `"1200000-150000"`. A golden value may be a
   list of accepted forms (any-of).
-- A no-tool task passes only when the agent calls nothing and the final text
-  matches an accepted answer after case, whitespace, and trailing-punctuation
-  normalization. Calling any tool is `WRONG_TOOL`.
+- A no-tool task passes when the agent calls nothing and returns a non-empty
+  reply. Prose is not scored: the benchmark measures tool use, so the `A:`
+  lines are reference answers for the offline baseline. Calling any tool is
+  `WRONG_TOOL`; an empty reply is `WRONG_ANSWER`.
 
 A golden trace is a scoring spec, not a replayable call. It may list fewer
 arguments than the tool needs to execute (for example, `cek_cuaca` scores only
@@ -149,8 +150,8 @@ tests/          offline tests only
   not real API reliability.
 - One anchor date keeps runs reproducible; tasks written for a different date
   need the anchor updated in `src/tugas/anchor.py`.
-- No-tool answers are matched exactly (any-of, normalized). Very free-form
-  replies can be marked `WRONG_ANSWER` even when the intent is right.
+- No-tool tasks score abstention, not prose quality; a reply that is wrong
+  about the world still passes if it avoided calling a tool.
 - Results depend on the gateway's tool-calling implementation and model version.
   Record both when reporting scores.
 

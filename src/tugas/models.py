@@ -52,8 +52,8 @@ class Task(BaseModel):
     id: str
     prompt: str
     expected: list[ExpectedCall]
-    # For no-tool tasks (expected == []): accepted final answers, any-of,
-    # matched after normalization. A non-matching answer is WRONG_ANSWER.
+    # For no-tool tasks (expected == []): reference final answers, replayed by
+    # the offline baseline. Scoring checks abstention plus a non-empty reply.
     answer_any_of: list[str] = Field(default_factory=list)
     category: str = "general"
     notes: str = ""

@@ -77,7 +77,7 @@ R: Ready kak! Kaos polos hitam ukuran L masih ada stok.
 N: Availability, with variant extraction from one casual line.
 ```
 
-Use `T:` for expected tool calls or `A:` for accepted no-tool answers, never
+Use `T:` for expected tool calls or `A:` for reference no-tool answers, never
 both. `R:` is the expected reply for human review and is not compiled. Add a
 task, run the builder, then run the tests. `tests/test_dataset.py` enforces
 unique ids, known tools, declared argument names, full tool coverage, and that
@@ -96,9 +96,9 @@ every fully specified expected call executes.
   the golden trace are scored; extra arguments are ignored. A golden call may
   list fewer arguments than the tool needs to execute, so a golden trace is a
   scoring spec, not a replayable call.
-- A no-tool task (`expected == []`) passes only when no tool is called and the
-  final text matches one of `answer_any_of` after case, whitespace, and
-  trailing-punctuation normalization.
+- A no-tool task (`expected == []`) passes when no tool is called and the
+  final text is non-empty. `answer_any_of` holds reference answers for the
+  offline baseline; text quality is not scored.
 - `golden_id.json` is generated. Never edit it by hand; edit
   `eval/datasets/raw/*.txt` and rerun the builder.
 

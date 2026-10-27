@@ -145,7 +145,7 @@ id: wa-booking-meja
 category: wa/booking
 Q: mau booking meja buat 4 orang besok malam ya
 T: parse_tanggal(teks="besok")
-T: cek_booking(tempat="meja"; tanggal="2026-10-08"; jam="19:00"; jumlah_orang="4")
+T: cek_booking(tempat="meja"; tanggal="2026-10-08"; jam=["19:00", "19.00"]; jumlah_orang="4")
 R: Oke kak, meja untuk 4 orang besok malam jam 19.00 sudah kami catat.
 N: Multi-step booking: resolve "besok" -> 2026-10-08, then check availability.
 
@@ -155,7 +155,7 @@ id: wa-booking-karaoke
 category: wa/booking
 Q: sewa room karaoke minggu depan jam 8 malam masih ada?
 T: parse_tanggal(teks="minggu depan")
-T: cek_booking(tempat="room karaoke"; tanggal="2026-10-14"; jam="20:00")
+T: cek_booking(tempat="room karaoke"; tanggal="2026-10-14"; jam=["20:00", "20.00"])
 R: Masih ada kak, room karaoke minggu depan jam 20.00 kosong.
 N: Multi-step; "jam 8 malam" -> 20:00.
 
@@ -164,7 +164,7 @@ N: Multi-step; "jam 8 malam" -> 20:00.
 id: wa-booking-studio
 category: wa/booking
 Q: booking studio foto tanggal 12 Oktober 2026 jam 10 pagi bisa?
-T: cek_booking(tempat="studio foto"; tanggal="2026-10-12"; jam="10:00")
+T: cek_booking(tempat="studio foto"; tanggal="2026-10-12"; jam=["10:00", "10.00"])
 R: Bisa kak, studio foto tanggal 12 Oktober 2026 jam 10.00 masih kosong.
 N: Absolute date given -> no parse needed.
 
@@ -173,7 +173,7 @@ N: Absolute date given -> no parse needed.
 id: wa-booking-futsal
 category: wa/booking
 Q: lapangan futsal malam ini jam 9 kosong ga?
-T: cek_booking(tempat="lapangan futsal"; tanggal="2026-10-07"; jam="21:00")
+T: cek_booking(tempat="lapangan futsal"; tanggal="2026-10-07"; jam=["21:00", "21.00"])
 R: Lapangan futsal malam ini jam 21.00 masih kosong kak.
 N: "malam ini" = anchor date; 9 malam -> 21:00. Implicit-date handling.
 
@@ -188,4 +188,3 @@ R: Bisa kak, kami catat reservasi untuk 20 orang minggu depan.
 N: Party reservation, jumlah_orang arg, no time given (time optional).
 
 ---
-
